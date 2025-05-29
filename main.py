@@ -1,36 +1,21 @@
-from game_engine.persistence_service import setup_database
-import os
-import tkinter as tk
-from ui.ui_manager import GameUI
+from game_engine.game_manager import GameManager
+# import os # No longer needed here as GameManager handles data directory
+# import tkinter as tk # No longer needed here
+# from ui.ui_manager import GameUI # No longer needed here
+# from game_engine.persistence_service import setup_database # No longer needed here
 
 def main():
     """
-    Main function to run the RPG game.
+    Main function to initialize and run the RPG game using GameManager.
     """
-    # Ensure the 'data' directory exists before setting up the database
-    data_dir = 'data'
-    if not os.path.exists(data_dir):
-        try:
-            os.makedirs(data_dir)
-            print(f"Directory '{data_dir}' created.")
-        except OSError as e:
-            print(f"Error creating directory '{data_dir}': {e}")
-            # Optionally, exit or raise the error if the directory is critical
-            return 
-
-    print("Setting up the database...")
-    setup_database()
-    print("Database setup complete.")
+    print("Main: Initializing GameManager...")
+    game_manager = GameManager()
+    print("Main: GameManager initialized.")
     
-    print("Initializing UI...")
-    root = tk.Tk()
-    app_ui = GameUI(root)
+    print("Main: Starting game...")
+    game_manager.start_game() # This will initialize DB, UI, and start the UI loop
     
-    print("Game starting...")
-    # For now, let's just print a message
-    print("Welcome to the RPG! UI should be running.")
-    
-    app_ui.start_ui() # This will block until the UI is closed
+    print("Main: Game has finished or UI was closed.")
 
 if __name__ == '__main__':
     main()
