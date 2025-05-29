@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import MagicMock # Import MagicMock
 import tkinter as tk
 import sys
 import os
@@ -16,11 +17,17 @@ class TestGameUI(unittest.TestCase):
     def setUp(self):
         """
         Set up the test environment before each test.
-        Creates a root Tk window and a GameUI instance.
+        Creates a root Tk window, a mock GameManager, and a GameUI instance.
         """
         self.root = tk.Tk()
         self.root.withdraw() # Hide the window during tests
-        self.app_ui = GameUI(self.root)
+        
+        self.mock_game_manager = MagicMock()
+        # Ensure the mock_game_manager has the process_player_command attribute (as a MagicMock itself)
+        # This is what GameUI.__init__ will try to access.
+        self.mock_game_manager.process_player_command = MagicMock() 
+        
+        self.app_ui = GameUI(self.root, self.mock_game_manager)
         self.root.update_idletasks() # Process pending tasks like geometry and title
 
     def tearDown(self):
@@ -78,6 +85,25 @@ class TestGameUI(unittest.TestCase):
         self.assertIsInstance(self.app_ui.input_entry, tk.Entry, "input_entry is not a tk.Entry.")
         self.assertIsInstance(self.app_ui.send_button, tk.Button, "send_button is not a tk.Button.")
         self.assertEqual(self.app_ui.send_button.cget('text'), "Send", "send_button text is not 'Send'.")
+        # Test that the send_button's command is configured to the game_manager's process_player_command
+        self.assertEqual(self.app_ui.send_button.cget('command'), self.mock_game_manager.process_player_command,
+                         "send_button command is not correctly set to game_manager.process_player_command.")
+
+    def test_send_button_command_with_none_game_manager(self):
+        """
+        Tests that send_button's command is None if GameUI is initialized with game_manager_ref=None.
+        """
+        # Create a new root window for this specific test to avoid interference
+        # or ensure proper cleanup if self.root is reused and destroyed by tearDown.
+        # However, since GameUI doesn't take ownership that destroys root,
+        # and tearDown handles self.root, we can reuse self.root, but it's cleaner
+        # to use a temporary one if there's any doubt, or manage destruction here.
+        temp_root = tk.Tk()
+        temp_root.withdraw()
+        app_ui_no_gm = GameUI(temp_root, None) # Pass None as game_manager_ref
+        self.assertIsNone(app_ui_no_gm.send_button.cget('command'),
+                          "send_button command should be None when game_manager_ref is None.")
+        temp_root.destroy() # Clean up the temporary root window
 
     def test_add_story_text(self):
         """

@@ -7,6 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from ui.ui_manager import GameUI
 from game_engine.persistence_service import setup_database
+from game_engine.input_parser import parse_input
 
 class GameManager:
     """
@@ -34,7 +35,7 @@ class GameManager:
 
         print("GameManager: Initializing UI...")
         self.root = tk.Tk()
-        self.ui = GameUI(self.root) # Create GameUI instance
+        self.ui = GameUI(self.root, self) # Pass GameManager instance to GameUI
         print("GameManager: UI initialized.")
 
     def start_game(self):
@@ -46,6 +47,28 @@ class GameManager:
             self.ui.start_ui()
         else:
             print("GameManager: Error - UI not initialized. Cannot start game.")
+
+    def process_player_command(self):
+        """
+        Retrieves player input from the UI, processes it, and displays feedback.
+        """
+        command_string = self.ui.get_player_input()
+        stripped_command = command_string.strip() # Get a stripped version once
+
+        if stripped_command: # Check if the stripped command is not empty
+            self.ui.add_story_text(f'You typed: {stripped_command}')
+            
+            # Call parse_input (already imported)
+            parsed_command = parse_input(stripped_command)
+            
+            # Placeholder for actual command processing logic
+            # For now, just acknowledge the parsed command (which is same as stripped_command)
+            # self.ui.add_story_text(f'Parsed as: {parsed_command}') # Optional debug line
+            
+            self.ui.add_story_text('The ancient echoes respond...')
+        # else:
+            # Optionally, handle empty input, e.g., self.ui.add_story_text("Please enter a command.")
+            # For now, empty input is silently ignored as per the conditional check.
 
 if __name__ == '__main__':
     # This block is for testing the GameManager independently.
