@@ -88,26 +88,39 @@ class TestGameManager(unittest.TestCase):
                                                mock_os_path_exists, mock_setup_database, 
                                                mock_game_ui_class, mock_tk_class):
         mock_os_path_exists.return_value = True
-        mock_ui_instance = MagicMock()
+        mock_ui_instance = MagicMock() # This is manager.ui
         mock_game_ui_class.return_value = mock_ui_instance
-        # AIDM is initialized but not directly used in this method by current design
-        mock_aidm_instance = MagicMock()
+        
+        mock_aidm_instance = MagicMock() # This is manager.ai_dm
         mock_aidm_class.return_value = mock_aidm_instance
         
-        mock_ui_instance.get_player_input.return_value = "test command"
-        mock_parse_input.return_value = "parsed test command"
+        # Configure mocks
+        player_input = "test command"
+        # parse_input currently returns the input as is. If it changes, this mock should too.
+        parsed_command_val = player_input 
+        ai_response_val = "Dynamic AI response."
+
+        mock_ui_instance.get_player_input.return_value = player_input
+        mock_parse_input.return_value = parsed_command_val
+        mock_aidm_instance.get_ai_response.return_value = ai_response_val
 
         manager = GameManager()
         manager.process_player_command()
 
+        # Assertions
         mock_ui_instance.get_player_input.assert_called_once()
-        mock_parse_input.assert_called_once_with("test command")
-        mock_aidm_class.assert_called_once() # Ensure AIDM was still initialized
+        mock_parse_input.assert_called_once_with(player_input) # parse_input receives the stripped command
+        mock_aidm_instance.get_ai_response.assert_called_once_with(player_action=parsed_command_val)
         
         calls = mock_ui_instance.add_story_text.call_args_list
-        self.assertEqual(len(calls), 2)
-        self.assertEqual(calls[0][0][0], 'You typed: test command')
-        self.assertEqual(calls[1][0][0], 'The ancient echoes respond...')
+        self.assertEqual(mock_ui_instance.add_story_text.call_count, 2)
+        # Using unittest.mock.call for more robust assertion of call arguments
+        expected_calls = [
+            unittest.mock.call(f'You typed: {player_input}'), # GameManager uses stripped_command which is player_input here
+            unittest.mock.call(ai_response_val)
+        ]
+        self.assertEqual(calls, expected_calls)
+        mock_aidm_class.assert_called_once() # Ensure AIDM was initialized
 
     @patch('game_engine.game_manager.tk.Tk')
     @patch('game_engine.game_manager.GameUI')
@@ -119,20 +132,22 @@ class TestGameManager(unittest.TestCase):
                                                 mock_os_path_exists, mock_setup_database, 
                                                 mock_game_ui_class, mock_tk_class):
         mock_os_path_exists.return_value = True
-        mock_ui_instance = MagicMock()
+        mock_ui_instance = MagicMock() # manager.ui
         mock_game_ui_class.return_value = mock_ui_instance
-        mock_aidm_instance = MagicMock()
+        
+        mock_aidm_instance = MagicMock() # manager.ai_dm
         mock_aidm_class.return_value = mock_aidm_instance
         
-        mock_ui_instance.get_player_input.return_value = "   " 
+        mock_ui_instance.get_player_input.return_value = "   " # Empty or whitespace input
 
         manager = GameManager()
         manager.process_player_command()
 
         mock_ui_instance.get_player_input.assert_called_once()
+        mock_parse_input.assert_not_called() # parse_input is inside the 'if stripped_command'
+        mock_aidm_instance.get_ai_response.assert_not_called()
         mock_ui_instance.add_story_text.assert_not_called()
-        mock_parse_input.assert_not_called()
-        mock_aidm_class.assert_called_once() # Ensure AIDM was still initialized
+        mock_aidm_class.assert_called_once() # Ensure AIDM was initialized
 
 
 if __name__ == '__main__':
