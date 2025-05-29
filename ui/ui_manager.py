@@ -5,14 +5,16 @@ class GameUI:
     """
     Manages the main user interface for the Mythic Realms RPG.
     """
-    def __init__(self, root):
+    def __init__(self, root, game_manager_ref):
         """
         Initializes the main game UI.
 
         Args:
             root: The root tkinter window.
+            game_manager_ref: A reference to the GameManager instance.
         """
         self.root = root
+        self.game_manager = game_manager_ref # Store the reference
         self.root.title('Mythic Realms RPG')
         self.root.geometry('1000x700')
 
@@ -48,7 +50,12 @@ class GameUI:
         # self.input_label = tk.Label(self.input_frame, text='Input Goes Here', bg='darkgrey')
         # self.input_label.pack(padx=10, pady=10)
 
-        self.send_button = tk.Button(self.input_frame, text="Send")
+        # If game_manager is None (e.g. in test mode), button does nothing unless overridden later.
+        cmd = None
+        if self.game_manager and hasattr(self.game_manager, 'process_player_command'):
+            cmd = self.game_manager.process_player_command
+        
+        self.send_button = tk.Button(self.input_frame, text="Send", command=cmd)
         self.send_button.pack(side=tk.RIGHT, padx=5, pady=5)
 
         self.input_entry = tk.Entry(self.input_frame, relief=tk.FLAT) # Added relief
@@ -85,8 +92,11 @@ class GameUI:
 
 if __name__ == '__main__':
     # This block is for testing the UI independently.
+    # Note: For full functionality in this test block, game_manager_ref would need to be a mock
+    # or a dummy object that has the methods GameUI might call on it (e.g., process_player_command).
+    # Passing None here allows basic layout testing.
     root_window = tk.Tk()
-    app_ui = GameUI(root_window)
+    app_ui = GameUI(root_window, None) # Pass None for game_manager_ref for standalone testing
 
     # Example usage of add_story_text
     app_ui.add_story_text("Welcome to Mythic Realms!")
@@ -95,17 +105,30 @@ if __name__ == '__main__':
         app_ui.add_story_text(f"This is line number {i+3} in the story text area.")
 
     # Example usage of get_player_input (configuring the button)
-    def handle_send_button():
+    def handle_send_button_test_mode(): # Renamed to avoid conflict if game_manager had same method
+        # In full operation, this would call game_manager.process_player_command()
+        # For standalone UI testing, we simulate the input handling locally.
         user_text = app_ui.get_player_input()
-        if user_text: # Don't add empty lines
-            app_ui.add_story_text(f"> {user_text}") # Display entered text in story area
+        if user_text:
+            app_ui.add_story_text(f"Test Mode > {user_text}")
+            if app_ui.game_manager and hasattr(app_ui.game_manager, 'process_player_command'):
+                # This part would only run if a mock/real game_manager with the method is passed
+                app_ui.game_manager.process_player_command() 
+            else:
+                app_ui.add_story_text("(No game manager to process command in test mode)")
         else:
-            app_ui.add_story_text("You entered nothing.") # Or handle empty input differently
+            app_ui.add_story_text("Test Mode: You entered nothing.")
 
-    app_ui.send_button.config(command=handle_send_button)
+    app_ui.send_button.config(command=handle_send_button_test_mode)
     
-    # Bind the Enter key to the send button's action
-    app_ui.input_entry.bind("<Return>", lambda event: handle_send_button())
+    # Bind the Enter key to the send button's action (or the test mode handler)
+    # The button's command is already set to handle_send_button_test_mode if running standalone.
+    # If we want the Enter key to also use this test_mode handler:
+    app_ui.input_entry.bind("<Return>", lambda event: handle_send_button_test_mode())
+    # If the button's command was NOT overridden in test mode, and game_manager was None,
+    # then the Enter key might also need a conditional command:
+    # enter_cmd = app_ui.send_button.cget('command') # Get command set in __init__ or overridden
+    # app_ui.input_entry.bind("<Return>", lambda event: enter_cmd() if enter_cmd else None)
 
 
     app_ui.start_ui() # Call the new method
