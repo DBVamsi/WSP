@@ -60,24 +60,69 @@ class TestGameUI(unittest.TestCase):
         self.assertIsInstance(self.app_ui.story_frame, tk.Frame, "story_frame is not a tk.Frame.")
         self.assertIsInstance(self.app_ui.input_frame, tk.Frame, "input_frame is not a tk.Frame.")
 
-    def test_labels_creation_and_text(self):
+    def test_widget_creation_and_properties(self):
         """
-        Tests if the temporary labels in each frame are created correctly
-        and have the specified text and properties.
+        Tests if the UI widgets (labels, text area, entry, button) are created correctly
+        and have the specified properties.
         """
         # Stats Label
         self.assertIsInstance(self.app_ui.stats_label, tk.Label, "stats_label is not a tk.Label.")
         self.assertEqual(self.app_ui.stats_label.cget('text'), 'Stats Go Here', "stats_label text is incorrect.")
 
-        # Story Label
-        self.assertIsInstance(self.app_ui.story_label, tk.Label, "story_label is not a tk.Label.")
-        self.assertEqual(self.app_ui.story_label.cget('text'), 'Story Goes Here', "story_label text is incorrect.")
-        self.assertEqual(self.app_ui.story_label.cget('fg'), 'white', "story_label foreground color is incorrect.")
-        # Background color is inherited from the frame, can also check self.app_ui.story_label.cget('bg') == 'black'
+        # Story Text Area (replaces story_label)
+        self.assertIsInstance(self.app_ui.story_text_area, tk.Text, "story_text_area is not a tk.Text.")
+        self.assertEqual(self.app_ui.story_text_area.cget('state'), tk.DISABLED, "story_text_area should be disabled initially.")
+        self.assertEqual(self.app_ui.story_text_area.cget('wrap'), tk.WORD, "story_text_area wrap mode is not tk.WORD.")
 
-        # Input Label
-        self.assertIsInstance(self.app_ui.input_label, tk.Label, "input_label is not a tk.Label.")
-        self.assertEqual(self.app_ui.input_label.cget('text'), 'Input Goes Here', "input_label text is incorrect.")
+        # Input Entry and Send Button (replaces input_label)
+        self.assertIsInstance(self.app_ui.input_entry, tk.Entry, "input_entry is not a tk.Entry.")
+        self.assertIsInstance(self.app_ui.send_button, tk.Button, "send_button is not a tk.Button.")
+        self.assertEqual(self.app_ui.send_button.cget('text'), "Send", "send_button text is not 'Send'.")
+
+    def test_add_story_text(self):
+        """
+        Tests the add_story_text method for functionality and state management.
+        """
+        # Initial state check (optional, but good for confirming setup)
+        self.assertEqual(self.app_ui.story_text_area.get("1.0", tk.END).strip(), "", "Story text area should be empty initially.")
+
+        # Add first line
+        self.app_ui.add_story_text("Test line 1")
+        self.root.update_idletasks() # Ensure UI updates are processed
+        self.assertEqual(self.app_ui.story_text_area.get("1.0", tk.END), "Test line 1\n", "First line not added correctly.")
+        self.assertEqual(self.app_ui.story_text_area.cget('state'), tk.DISABLED, "Story text area should be disabled after adding text.")
+
+        # Add second line
+        self.app_ui.add_story_text("Test line 2")
+        self.root.update_idletasks()
+        self.assertEqual(self.app_ui.story_text_area.get("1.0", tk.END), "Test line 1\nTest line 2\n", "Second line not appended correctly.")
+        self.assertEqual(self.app_ui.story_text_area.cget('state'), tk.DISABLED, "Story text area should be disabled after adding more text.")
+        
+        # Test scrolling (see method was called) - requires mocking
+        # For simplicity, this part is omitted as per typical direct widget testing,
+        # but if essential, story_text_area.see could be mocked.
+
+    def test_get_player_input(self):
+        """
+        Tests the get_player_input method for text retrieval and clearing.
+        """
+        test_input_string = "Player test input"
+        
+        # Set text in the input entry
+        self.app_ui.input_entry.insert(0, test_input_string)
+        self.root.update_idletasks()
+        self.assertEqual(self.app_ui.input_entry.get(), test_input_string, "Input entry did not accept text correctly.")
+
+        # Call get_player_input
+        retrieved_text = self.app_ui.get_player_input()
+        self.root.update_idletasks()
+
+        # Assert retrieved text is correct
+        self.assertEqual(retrieved_text, test_input_string, "get_player_input did not return the correct string.")
+
+        # Assert input_entry is now empty
+        self.assertEqual(self.app_ui.input_entry.get(), "", "input_entry was not cleared after get_player_input.")
+
 
 if __name__ == '__main__':
     unittest.main()
