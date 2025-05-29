@@ -1,5 +1,7 @@
 from game_engine.persistence_service import setup_database
 import os
+import tkinter as tk
+from ui.ui_manager import GameUI
 
 def main():
     """
@@ -20,10 +22,15 @@ def main():
     setup_database()
     print("Database setup complete.")
     
-    # Future game logic will go here
+    print("Initializing UI...")
+    root = tk.Tk()
+    app_ui = GameUI(root)
+    
     print("Game starting...")
     # For now, let's just print a message
-    print("Welcome to the RPG!")
+    print("Welcome to the RPG! UI should be running.")
+    
+    app_ui.start_ui() # This will block until the UI is closed
 
 if __name__ == '__main__':
     main()
