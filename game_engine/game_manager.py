@@ -85,8 +85,12 @@ class GameManager:
             # Placeholder for actual command processing logic
             # For now, just acknowledge the parsed command (which is same as stripped_command)
             # self.ui.add_story_text(f'Parsed as: {parsed_command}') # Optional debug line
-            
-            self.ui.add_story_text('The ancient echoes respond...')
+
+            # Get AI response to the player's command
+            # For now, we are not passing any specific context beyond the default
+            # This could be expanded to include recent story text or game state.
+            ai_response = self.ai_dm.get_ai_response(player_action=parsed_command)
+            self.ui.add_story_text(ai_response)
         # else:
             # Optionally, handle empty input, e.g., self.ui.add_story_text("Please enter a command.")
             # For now, empty input is silently ignored as per the conditional check.
