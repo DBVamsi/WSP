@@ -8,6 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ui.ui_manager import GameUI
 from game_engine.persistence_service import setup_database
 from game_engine.input_parser import parse_input
+from game_engine.ai_dm_interface import AIDungeonMaster
 
 class GameManager:
     """
@@ -38,15 +39,34 @@ class GameManager:
         self.ui = GameUI(self.root, self) # Pass GameManager instance to GameUI
         print("GameManager: UI initialized.")
 
+        print("GameManager: Initializing AI Dungeon Master...")
+        # It's recommended to load the API key from an environment variable or a secure config
+        # For now, using a placeholder. The AIDungeonMaster class itself will try os.getenv("GOOGLE_API_KEY")
+        # if 'YOUR_GOOGLE_AI_API_KEY_PLACEHOLDER' is passed as None or if the key is invalid.
+        # Passing a specific placeholder string like this will cause AIDungeonMaster to use it directly.
+        # If this placeholder is intended to be replaced by an actual key later, that's fine.
+        # If the intention is for AIDungeonMaster to use its os.getenv logic, pass api_key=None here.
+        self.ai_dm = AIDungeonMaster(api_key='YOUR_GOOGLE_AI_API_KEY_PLACEHOLDER')
+        print("GameManager: AI Dungeon Master initialized.")
+
+
     def start_game(self):
         """
         Starts the main game UI loop.
         """
-        if hasattr(self, 'ui') and self.ui:
+        if hasattr(self, 'ui') and self.ui and hasattr(self, 'ai_dm'):
+            print("GameManager: Getting initial scene from AI DM...")
+            initial_description = self.ai_dm.get_initial_scene_description()
+            print("GameManager: Initial scene received. Displaying...")
+            self.ui.add_story_text(initial_description)
+
             print("GameManager: Starting UI...")
             self.ui.start_ui()
-        else:
+        elif not hasattr(self, 'ui') or not self.ui:
             print("GameManager: Error - UI not initialized. Cannot start game.")
+        else: # ai_dm is missing
+            print("GameManager: Error - AI DM not initialized. Cannot start game.")
+
 
     def process_player_command(self):
         """

@@ -16,82 +16,85 @@ class TestGameManager(unittest.TestCase):
     Test suite for the GameManager class.
     """
 
-    @patch('game_engine.game_manager.os.path.exists')
-    @patch('game_engine.game_manager.setup_database')
-    @patch('game_engine.game_manager.GameUI')
     @patch('game_engine.game_manager.tk.Tk')
-    def test_game_manager_initialization(self, mock_tk_class, mock_game_ui_class, 
-                                         mock_setup_database, mock_os_path_exists):
+    @patch('game_engine.game_manager.GameUI')
+    @patch('game_engine.game_manager.setup_database')
+    @patch('game_engine.game_manager.os.path.exists')
+    @patch('game_engine.game_manager.AIDungeonMaster')
+    def test_game_manager_initialization(self, mock_aidm_class, mock_os_path_exists, 
+                                         mock_setup_database, mock_game_ui_class, mock_tk_class):
         """
         Tests the initialization of GameManager, ensuring dependencies are called.
-        Mock order (from @patch decorators): tk.Tk, GameUI, setup_database, os.path.exists
-        Test method args order: mock_tk_class, mock_game_ui_class, mock_setup_database, mock_os_path_exists
+        Order of args should match the reverse order of decorators.
         """
-        # Ensure os.path.exists returns True to simplify the data directory check
         mock_os_path_exists.return_value = True
+        mock_aidm_instance = MagicMock()
+        mock_aidm_class.return_value = mock_aidm_instance
 
-        # Instantiate GameManager
-        game_manager = GameManager() # This is the instance we need to pass
+        game_manager = GameManager()
 
-        # Assertions
         mock_os_path_exists.assert_called_once_with('data')
         mock_setup_database.assert_called_once()
         mock_tk_class.assert_called_once()
-        
-        # GameUI should be initialized with the instance returned by tk.Tk() and the game_manager instance
         mock_game_ui_class.assert_called_once_with(mock_tk_class.return_value, game_manager)
+        mock_aidm_class.assert_called_once_with(api_key='YOUR_GOOGLE_AI_API_KEY_PLACEHOLDER')
         
-        self.assertEqual(game_manager.root, mock_tk_class.return_value,
-                         "GameManager's root is not the instance returned by tk.Tk mock.")
-        self.assertEqual(game_manager.ui, mock_game_ui_class.return_value,
-                         "GameManager's ui is not the instance returned by GameUI mock.")
+        self.assertEqual(game_manager.root, mock_tk_class.return_value)
+        self.assertEqual(game_manager.ui, mock_game_ui_class.return_value)
+        self.assertEqual(game_manager.ai_dm, mock_aidm_instance)
 
-    @patch('game_engine.game_manager.os.path.exists')
-    @patch('game_engine.game_manager.setup_database')
-    @patch('game_engine.game_manager.GameUI')
     @patch('game_engine.game_manager.tk.Tk')
-    def test_start_game_calls_ui_start_ui(self, mock_tk_class, mock_game_ui_class, 
-                                           mock_setup_database, mock_os_path_exists):
+    @patch('game_engine.game_manager.GameUI')
+    @patch('game_engine.game_manager.setup_database')
+    @patch('game_engine.game_manager.os.path.exists')
+    @patch('game_engine.game_manager.AIDungeonMaster')
+    def test_start_game_calls_ui_start_ui_and_ai_dm(self, mock_aidm_class, mock_os_path_exists,
+                                           mock_setup_database, mock_game_ui_class, mock_tk_class):
         """
-        Tests if GameManager.start_game() correctly calls the ui's start_ui() method.
-        Mock order (from @patch decorators): tk.Tk, GameUI, setup_database, os.path.exists
-        Test method args order: mock_tk_class, mock_game_ui_class, mock_setup_database, mock_os_path_exists
+        Tests if GameManager.start_game() calls AI DM for initial scene,
+        adds it to UI, and then starts the UI.
         """
         mock_os_path_exists.return_value = True
-
-        # Mock the GameUI instance and its start_ui method
+        
         mock_ui_instance = MagicMock()
         mock_game_ui_class.return_value = mock_ui_instance
+        
+        mock_aidm_instance = MagicMock()
+        mock_aidm_class.return_value = mock_aidm_instance
+        mock_aidm_instance.get_initial_scene_description.return_value = "Test initial scene."
 
-        # Instantiate GameManager
-        game_manager = GameManager() # Instance to be passed
+        game_manager = GameManager()
 
-        # Call the method to test
         game_manager.start_game()
 
-        # Assert that the UI's start_ui method was called
+        mock_aidm_instance.get_initial_scene_description.assert_called_once()
+        mock_ui_instance.add_story_text.assert_any_call("Test initial scene.")
         mock_ui_instance.start_ui.assert_called_once()
         
-        # Also check that core init steps were still performed
+        # Verify init calls still happened
         mock_setup_database.assert_called_once()
         mock_tk_class.assert_called_once()
         mock_game_ui_class.assert_called_once_with(mock_tk_class.return_value, game_manager)
+        mock_aidm_class.assert_called_once_with(api_key='YOUR_GOOGLE_AI_API_KEY_PLACEHOLDER')
 
-    @patch('game_engine.game_manager.os.path.exists')
-    @patch('game_engine.game_manager.setup_database')
-    @patch('game_engine.game_manager.GameUI')
+
     @patch('game_engine.game_manager.tk.Tk')
+    @patch('game_engine.game_manager.GameUI')
+    @patch('game_engine.game_manager.setup_database')
+    @patch('game_engine.game_manager.os.path.exists')
+    @patch('game_engine.game_manager.AIDungeonMaster')
     @patch('game_engine.game_manager.parse_input')
-    def test_process_player_command_with_input(self, mock_parse_input, mock_tk_class, 
-                                               mock_game_ui_class, mock_setup_database, 
-                                               mock_os_path_exists):
+    def test_process_player_command_with_input(self, mock_parse_input, mock_aidm_class, 
+                                               mock_os_path_exists, mock_setup_database, 
+                                               mock_game_ui_class, mock_tk_class):
         mock_os_path_exists.return_value = True
         mock_ui_instance = MagicMock()
         mock_game_ui_class.return_value = mock_ui_instance
+        # AIDM is initialized but not directly used in this method by current design
+        mock_aidm_instance = MagicMock()
+        mock_aidm_class.return_value = mock_aidm_instance
         
-        # Configure mock UI behavior
         mock_ui_instance.get_player_input.return_value = "test command"
-        # Configure mock parse_input behavior
         mock_parse_input.return_value = "parsed test command"
 
         manager = GameManager()
@@ -99,26 +102,28 @@ class TestGameManager(unittest.TestCase):
 
         mock_ui_instance.get_player_input.assert_called_once()
         mock_parse_input.assert_called_once_with("test command")
+        mock_aidm_class.assert_called_once() # Ensure AIDM was still initialized
         
-        # Check calls to add_story_text
         calls = mock_ui_instance.add_story_text.call_args_list
         self.assertEqual(len(calls), 2)
-        self.assertEqual(calls[0][0][0], 'You typed: test command') # first argument of first call
-        self.assertEqual(calls[1][0][0], 'The ancient echoes respond...') # first argument of second call
+        self.assertEqual(calls[0][0][0], 'You typed: test command')
+        self.assertEqual(calls[1][0][0], 'The ancient echoes respond...')
 
-    @patch('game_engine.game_manager.os.path.exists')
-    @patch('game_engine.game_manager.setup_database')
-    @patch('game_engine.game_manager.GameUI')
     @patch('game_engine.game_manager.tk.Tk')
+    @patch('game_engine.game_manager.GameUI')
+    @patch('game_engine.game_manager.setup_database')
+    @patch('game_engine.game_manager.os.path.exists')
+    @patch('game_engine.game_manager.AIDungeonMaster')
     @patch('game_engine.game_manager.parse_input')
-    def test_process_player_command_empty_input(self, mock_parse_input, mock_tk_class, 
-                                                mock_game_ui_class, mock_setup_database, 
-                                                mock_os_path_exists):
+    def test_process_player_command_empty_input(self, mock_parse_input, mock_aidm_class, 
+                                                mock_os_path_exists, mock_setup_database, 
+                                                mock_game_ui_class, mock_tk_class):
         mock_os_path_exists.return_value = True
         mock_ui_instance = MagicMock()
         mock_game_ui_class.return_value = mock_ui_instance
-
-        # Configure mock UI behavior for empty/whitespace input
+        mock_aidm_instance = MagicMock()
+        mock_aidm_class.return_value = mock_aidm_instance
+        
         mock_ui_instance.get_player_input.return_value = "   " 
 
         manager = GameManager()
@@ -127,6 +132,7 @@ class TestGameManager(unittest.TestCase):
         mock_ui_instance.get_player_input.assert_called_once()
         mock_ui_instance.add_story_text.assert_not_called()
         mock_parse_input.assert_not_called()
+        mock_aidm_class.assert_called_once() # Ensure AIDM was still initialized
 
 
 if __name__ == '__main__':
