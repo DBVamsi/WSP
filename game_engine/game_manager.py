@@ -59,6 +59,7 @@ class GameManager:
             initial_description = self.ai_dm.get_initial_scene_description()
             print("GameManager: Initial scene received. Displaying...")
             self.ui.add_story_text(initial_description)
+            print("GameManager: Initial scene processed.")
 
             print("GameManager: Starting UI...")
             self.ui.start_ui()
