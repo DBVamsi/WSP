@@ -51,6 +51,32 @@ class AIDungeonMaster:
             print(f'Error contacting AI DM for initial scene: {e}')
             return 'Error: The mists of creation obscure your vision... Please check your connection or API key.'
 
+    def get_ai_response(self, player_action: str, current_context: str = 'The player is in an area previously described.') -> str:
+        """
+        Generates and returns the AI DM's response to a player's action.
+
+        Args:
+            player_action (str): The action taken by the player.
+            current_context (str, optional): The current context or situation of the game.
+                                             Defaults to 'The player is in an area previously described.'.
+
+        Returns:
+            str: The AI DM's narrative response to the player's action, or an error message.
+        """
+        prompt_string = (
+            f'You are the Dungeon Master for a text-based RPG set in a world inspired by Indian Mythology. '
+            f'The current situation is: {current_context}. '
+            f'The player says: "{player_action}". '
+            f'Describe what happens next in 2-4 concise sentences, keeping the mythology theme in mind.'
+        )
+        try:
+            response = self.model.generate_content(prompt_string)
+            # Consider adding more robust error checking for response if needed
+            return response.text
+        except Exception as e:
+            print(f'Error contacting AI DM (player action): {e}')
+            return 'Error: The threads of fate are tangled... Please try again.'
+
 if __name__ == '__main__':
     # Example Usage (requires GOOGLE_API_KEY to be set in the environment)
     # Ensure you have the google-generativeai package installed: pip install google-generativeai
@@ -77,6 +103,29 @@ if __name__ == '__main__':
             initial_scene = dm.get_initial_scene_description()
             print("\nInitial Scene:")
             print(initial_scene)
+
+            print("\n--- Simulating Player Action ---")
+            player_input_action = "I look for a weapon."
+            print(f"Player action: {player_input_action}")
+            # Use the initial scene as context, or a more specific one if available
+            context_for_action = initial_scene 
+            if "Error:" in initial_scene: # If initial scene failed, use a generic context
+                context_for_action = "The player is standing at the precipice of adventure, the air thick with anticipation."
+            
+            ai_narrative = dm.get_ai_response(player_action=player_input_action, current_context=context_for_action)
+            print("\nAI DM's Response:")
+            print(ai_narrative)
+
+            player_input_action_2 = "I try to meditate to sense my surroundings."
+            print(f"\nPlayer action: {player_input_action_2}")
+            context_for_action_2 = ai_narrative # Use previous AI response as new context
+            if "Error:" in ai_narrative:
+                 context_for_action_2 = "Despite the previous error, the player tries to focus."
+
+            ai_narrative_2 = dm.get_ai_response(player_action=player_input_action_2, current_context=context_for_action_2)
+            print("\nAI DM's Response:")
+            print(ai_narrative_2)
+
 
     except ValueError as e:
         print(f"Error initializing AIDungeonMaster: {e}")

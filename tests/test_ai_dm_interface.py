@@ -93,5 +93,84 @@ class TestAIDungeonMaster(unittest.TestCase):
         self.assertEqual(scene, 'Error: The mists of creation obscure your vision... Please check your connection or API key.')
         mock_print.assert_called_once_with(f'Error contacting AI DM for initial scene: {api_error_message}')
 
+    @patch('game_engine.ai_dm_interface.genai')
+    def test_get_ai_response_success(self, mock_genai_module):
+        """
+        Tests successful retrieval of an AI response to player action.
+        """
+        mock_model_instance = MagicMock()
+        mock_genai_module.GenerativeModel.return_value = mock_model_instance
+
+        mock_response_obj = MagicMock()
+        mock_response_obj.text = "AI response to player."
+        mock_model_instance.generate_content.return_value = mock_response_obj
+
+        dm = AIDungeonMaster(api_key='test_key_response')
+        
+        # Test with specific context
+        player_action = "look around"
+        current_context = "A dark cave."
+        response_text = dm.get_ai_response(player_action, current_context)
+        
+        expected_prompt = (
+            f'You are the Dungeon Master for a text-based RPG set in a world inspired by Indian Mythology. '
+            f'The current situation is: {current_context}. '
+            f'The player says: "{player_action}". '
+            f'Describe what happens next in 2-4 concise sentences, keeping the mythology theme in mind.'
+        )
+        mock_model_instance.generate_content.assert_called_once_with(expected_prompt)
+        self.assertEqual(response_text, "AI response to player.")
+
+        # Test with default context
+        mock_model_instance.generate_content.reset_mock() # Reset mock for the next call
+        # Re-assign return_value as reset_mock might clear it if it was a one-time config
+        mock_model_instance.generate_content.return_value = mock_response_obj 
+
+        response_text_default_ctx = dm.get_ai_response(player_action)
+        expected_prompt_default_ctx = (
+            f'You are the Dungeon Master for a text-based RPG set in a world inspired by Indian Mythology. '
+            f'The current situation is: The player is in an area previously described.. ' # Note the extra dot from default value.
+            f'The player says: "{player_action}". '
+            f'Describe what happens next in 2-4 concise sentences, keeping the mythology theme in mind.'
+        )
+        # Correcting the expected prompt for default context based on actual implementation
+        expected_prompt_default_ctx_corrected = (
+            f'You are the Dungeon Master for a text-based RPG set in a world inspired by Indian Mythology. '
+            f'The current situation is: The player is in an area previously described.. ' # Default value has a period.
+            f'The player says: "{player_action}". '
+            f'Describe what happens next in 2-4 concise sentences, keeping the mythology theme in mind.'
+        )
+        # The default value in the method is 'The player is in an area previously described.' (no period at the end)
+        # Let's ensure the test matches the actual default value used in the prompt construction.
+        default_context_val = 'The player is in an area previously described.'
+        expected_prompt_default_ctx_actual = (
+            f'You are the Dungeon Master for a text-based RPG set in a world inspired by Indian Mythology. '
+            f'The current situation is: {default_context_val}. '
+            f'The player says: "{player_action}". '
+            f'Describe what happens next in 2-4 concise sentences, keeping the mythology theme in mind.'
+        )
+
+        mock_model_instance.generate_content.assert_called_once_with(expected_prompt_default_ctx_actual)
+        self.assertEqual(response_text_default_ctx, "AI response to player.")
+
+
+    @patch('builtins.print')
+    @patch('game_engine.ai_dm_interface.genai')
+    def test_get_ai_response_api_error(self, mock_genai_module, mock_print):
+        """
+        Tests API error handling in get_ai_response.
+        """
+        mock_model_instance = MagicMock()
+        mock_genai_module.GenerativeModel.return_value = mock_model_instance
+
+        error_message = "AI system critical failure"
+        mock_model_instance.generate_content.side_effect = Exception(error_message)
+
+        dm = AIDungeonMaster(api_key='test_key_response_error')
+        response_text = dm.get_ai_response("any action")
+
+        self.assertEqual(response_text, 'Error: The threads of fate are tangled... Please try again.')
+        mock_print.assert_called_once_with(f'Error contacting AI DM (player action): {error_message}')
+
 if __name__ == '__main__':
     unittest.main()
