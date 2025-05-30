@@ -21,7 +21,7 @@ class TestGameManager(unittest.TestCase):
     @patch('game_engine.game_manager.setup_database')
     @patch('game_engine.game_manager.os.path.exists')
     @patch('game_engine.game_manager.AIDungeonMaster')
-    def test_game_manager_initialization(self, mock_aidm_class, mock_os_path_exists, 
+    def test_game_manager_initialization(self, mock_aidm_class, mock_os_path_exists,
                                          mock_setup_database, mock_game_ui_class, mock_tk_class):
         """
         Tests the initialization of GameManager, ensuring dependencies are called.
@@ -38,7 +38,7 @@ class TestGameManager(unittest.TestCase):
         mock_tk_class.assert_called_once()
         mock_game_ui_class.assert_called_once_with(mock_tk_class.return_value, game_manager)
         mock_aidm_class.assert_called_once_with(api_key='YOUR_GOOGLE_AI_API_KEY_PLACEHOLDER')
-        
+
         self.assertEqual(game_manager.root, mock_tk_class.return_value)
         self.assertEqual(game_manager.ui, mock_game_ui_class.return_value)
         self.assertEqual(game_manager.ai_dm, mock_aidm_instance)
@@ -55,10 +55,10 @@ class TestGameManager(unittest.TestCase):
         adds it to UI, and then starts the UI.
         """
         mock_os_path_exists.return_value = True
-        
+
         mock_ui_instance = MagicMock()
         mock_game_ui_class.return_value = mock_ui_instance
-        
+
         mock_aidm_instance = MagicMock()
         mock_aidm_class.return_value = mock_aidm_instance
         mock_aidm_instance.get_initial_scene_description.return_value = "Test initial scene."
@@ -70,7 +70,7 @@ class TestGameManager(unittest.TestCase):
         mock_aidm_instance.get_initial_scene_description.assert_called_once()
         mock_ui_instance.add_story_text.assert_any_call("Test initial scene.")
         mock_ui_instance.start_ui.assert_called_once()
-        
+
         # Verify init calls still happened
         mock_setup_database.assert_called_once()
         mock_tk_class.assert_called_once()
@@ -84,20 +84,20 @@ class TestGameManager(unittest.TestCase):
     @patch('game_engine.game_manager.os.path.exists')
     @patch('game_engine.game_manager.AIDungeonMaster')
     @patch('game_engine.game_manager.parse_input')
-    def test_process_player_command_with_input(self, mock_parse_input, mock_aidm_class, 
-                                               mock_os_path_exists, mock_setup_database, 
+    def test_process_player_command_with_input(self, mock_parse_input, mock_aidm_class,
+                                               mock_os_path_exists, mock_setup_database,
                                                mock_game_ui_class, mock_tk_class):
         mock_os_path_exists.return_value = True
         mock_ui_instance = MagicMock() # This is manager.ui
         mock_game_ui_class.return_value = mock_ui_instance
-        
+
         mock_aidm_instance = MagicMock() # This is manager.ai_dm
         mock_aidm_class.return_value = mock_aidm_instance
-        
+
         # Configure mocks
         player_input = "test command"
         # parse_input currently returns the input as is. If it changes, this mock should too.
-        parsed_command_val = player_input 
+        parsed_command_val = player_input
         ai_response_val = "Dynamic AI response."
 
         mock_ui_instance.get_player_input.return_value = player_input
@@ -111,7 +111,7 @@ class TestGameManager(unittest.TestCase):
         mock_ui_instance.get_player_input.assert_called_once()
         mock_parse_input.assert_called_once_with(player_input) # parse_input receives the stripped command
         mock_aidm_instance.get_ai_response.assert_called_once_with(player_action=parsed_command_val)
-        
+
         calls = mock_ui_instance.add_story_text.call_args_list
         self.assertEqual(mock_ui_instance.add_story_text.call_count, 2)
         # Using unittest.mock.call for more robust assertion of call arguments
@@ -128,16 +128,16 @@ class TestGameManager(unittest.TestCase):
     @patch('game_engine.game_manager.os.path.exists')
     @patch('game_engine.game_manager.AIDungeonMaster')
     @patch('game_engine.game_manager.parse_input')
-    def test_process_player_command_empty_input(self, mock_parse_input, mock_aidm_class, 
-                                                mock_os_path_exists, mock_setup_database, 
+    def test_process_player_command_empty_input(self, mock_parse_input, mock_aidm_class,
+                                                mock_os_path_exists, mock_setup_database,
                                                 mock_game_ui_class, mock_tk_class):
         mock_os_path_exists.return_value = True
         mock_ui_instance = MagicMock() # manager.ui
         mock_game_ui_class.return_value = mock_ui_instance
-        
+
         mock_aidm_instance = MagicMock() # manager.ai_dm
         mock_aidm_class.return_value = mock_aidm_instance
-        
+
         mock_ui_instance.get_player_input.return_value = "   " # Empty or whitespace input
 
         manager = GameManager()

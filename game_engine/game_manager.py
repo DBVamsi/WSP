@@ -78,10 +78,10 @@ class GameManager:
 
         if stripped_command: # Check if the stripped command is not empty
             self.ui.add_story_text(f'You typed: {stripped_command}')
-            
+
             # Call parse_input (already imported)
             parsed_command = parse_input(stripped_command)
-            
+
             # Placeholder for actual command processing logic
             # For now, just acknowledge the parsed command (which is same as stripped_command)
             # self.ui.add_story_text(f'Parsed as: {parsed_command}') # Optional debug line
@@ -100,12 +100,12 @@ if __name__ == '__main__':
     print("Initializing GameManager for testing...")
     game_manager = GameManager()
     print("GameManager initialized.")
-    
+
     # To actually see the UI during testing, you would call:
     # print("Starting game UI for testing...")
-    # game_manager.start_game() 
+    # game_manager.start_game()
     # print("Game UI finished or closed.")
-    
+
     # For now, just confirm it ran without starting the mainloop,
     # as per the task focusing on __init__
     if hasattr(game_manager, 'root') and game_manager.root:

@@ -20,13 +20,16 @@ class Player:
         self.max_hp = max_hp
         self.mp = mp
         self.max_mp = max_mp
+        self.current_location: str = 'Battlefield - Edge of the Kurukshetra'
+        self.story_flags: dict = {}
 
     def __repr__(self):
         """
         Returns a string representation of the Player instance.
         """
         return (f"Player(player_id={self.player_id}, name='{self.name}', "
-                f"hp={self.hp}/{self.max_hp}, mp={self.mp}/{self.max_mp})")
+                f"hp={self.hp}/{self.max_hp}, mp={self.mp}/{self.max_mp}, "
+                f"location='{self.current_location}', flags={self.story_flags})")
 
 if __name__ == '__main__':
     # Example usage:

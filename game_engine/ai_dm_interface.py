@@ -19,7 +19,7 @@ class AIDungeonMaster:
         """
         if api_key is None:
             api_key = os.getenv("GOOGLE_API_KEY")
-        
+
         if not api_key:
             raise ValueError("API key not provided and GOOGLE_API_KEY environment variable not set.")
 
@@ -85,7 +85,7 @@ if __name__ == '__main__':
         # To run this example, make sure your GOOGLE_API_KEY is set in your environment
         # For example, in your terminal: export GOOGLE_API_KEY="YOUR_API_KEY"
         # Or pass it directly: dm = AIDungeonMaster(api_key="YOUR_API_KEY")
-        
+
         # Attempt to load API key from environment if not directly passed for this example
         if not os.getenv("GOOGLE_API_KEY"):
             print("Warning: GOOGLE_API_KEY environment variable is not set.")
@@ -93,7 +93,7 @@ if __name__ == '__main__':
         else:
             dm = AIDungeonMaster() # API key loaded from environment
             print("AIDungeonMaster initialized successfully.")
-            
+
             if "gemini-1.5-flash" in dm.model.model_name:
                  print(f"Successfully initialized model: {dm.model.model_name}")
             else:
@@ -108,10 +108,10 @@ if __name__ == '__main__':
             player_input_action = "I look for a weapon."
             print(f"Player action: {player_input_action}")
             # Use the initial scene as context, or a more specific one if available
-            context_for_action = initial_scene 
+            context_for_action = initial_scene
             if "Error:" in initial_scene: # If initial scene failed, use a generic context
                 context_for_action = "The player is standing at the precipice of adventure, the air thick with anticipation."
-            
+
             ai_narrative = dm.get_ai_response(player_action=player_input_action, current_context=context_for_action)
             print("\nAI DM's Response:")
             print(ai_narrative)

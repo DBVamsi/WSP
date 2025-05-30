@@ -42,12 +42,23 @@ class TestPlayer(unittest.TestCase):
         self.assertIsInstance(player.mp, int, "mp is not an integer.")
         self.assertIsInstance(player.max_mp, int, "max_mp is not an integer.")
 
+        # Assert new attributes
+        self.assertEqual(player.current_location, 'Battlefield - Edge of the Kurukshetra',
+                         "current_location does not match default value.")
+        self.assertIsInstance(player.current_location, str, "current_location is not a string.")
+
+        self.assertEqual(player.story_flags, {}, "story_flags is not an empty dict by default.")
+        self.assertIsInstance(player.story_flags, dict, "story_flags is not a dictionary.")
+
+
     def test_player_representation(self):
         """
         Tests the __repr__ method of the Player class.
         """
         player = Player(player_id=2, name="Mage", hp=60, max_hp=60, mp=120, max_mp=120)
-        expected_repr = "Player(player_id=2, name='Mage', hp=60/60, mp=120/120)"
+        # Expected representation now includes location and flags
+        expected_repr = ("Player(player_id=2, name='Mage', hp=60/60, mp=120/120, "
+                         "location='Battlefield - Edge of the Kurukshetra', flags={})")
         self.assertEqual(repr(player), expected_repr, "__repr__ output is not as expected.")
 
 if __name__ == '__main__':

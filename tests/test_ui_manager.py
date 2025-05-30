@@ -21,12 +21,12 @@ class TestGameUI(unittest.TestCase):
         """
         self.root = tk.Tk()
         self.root.withdraw() # Hide the window during tests
-        
+
         self.mock_game_manager = MagicMock()
         # Ensure the mock_game_manager has the process_player_command attribute (as a MagicMock itself)
         # This is what GameUI.__init__ will try to access.
-        self.mock_game_manager.process_player_command = MagicMock() 
-        
+        self.mock_game_manager.process_player_command = MagicMock()
+
         self.app_ui = GameUI(self.root, self.mock_game_manager)
         self.root.update_idletasks() # Process pending tasks like geometry and title
 
@@ -56,7 +56,7 @@ class TestGameUI(unittest.TestCase):
         """
         # update_idletasks in setUp should be enough, but one more here won't hurt
         # for geometry which can be particularly dependent on window manager interactions.
-        self.root.update() 
+        self.root.update()
         self.assertIn('1000x700', self.app_ui.root.winfo_geometry(), "Window geometry is not correct.")
 
     def test_frames_creation(self):
@@ -123,7 +123,7 @@ class TestGameUI(unittest.TestCase):
         self.root.update_idletasks()
         self.assertEqual(self.app_ui.story_text_area.get("1.0", tk.END), "Test line 1\nTest line 2\n", "Second line not appended correctly.")
         self.assertEqual(self.app_ui.story_text_area.cget('state'), tk.DISABLED, "Story text area should be disabled after adding more text.")
-        
+
         # Test scrolling (see method was called) - requires mocking
         # For simplicity, this part is omitted as per typical direct widget testing,
         # but if essential, story_text_area.see could be mocked.
@@ -133,7 +133,7 @@ class TestGameUI(unittest.TestCase):
         Tests the get_player_input method for text retrieval and clearing.
         """
         test_input_string = "Player test input"
-        
+
         # Set text in the input entry
         self.app_ui.input_entry.insert(0, test_input_string)
         self.root.update_idletasks()

@@ -5,7 +5,7 @@ def setup_database(db_path='data/rpg_save.db'):
     Connects to the SQLite database and creates the 'players' table if it doesn't exist.
 
     Args:
-        db_path (str, optional): The path to the database file. 
+        db_path (str, optional): The path to the database file.
                                  Defaults to 'data/rpg_save.db'.
     """
     conn = None  # Initialize conn to None

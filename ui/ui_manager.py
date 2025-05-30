@@ -41,7 +41,7 @@ class GameUI:
         # Replace story_label with a Text widget for scrollable story text
         # self.story_label = tk.Label(self.story_frame, text='Story Goes Here', fg='white', bg='black')
         # self.story_label.pack(padx=10, pady=10)
-        self.story_text_area = tk.Text(self.story_frame, state=tk.DISABLED, wrap=tk.WORD, 
+        self.story_text_area = tk.Text(self.story_frame, state=tk.DISABLED, wrap=tk.WORD,
                                        bg='black', fg='white', relief=tk.FLAT,
                                        padx=5, pady=5) # Added relief and internal padding
         self.story_text_area.pack(expand=True, fill=tk.BOTH, padx=5, pady=5) # External padding for the widget itself
@@ -54,7 +54,7 @@ class GameUI:
         cmd = None
         if self.game_manager and hasattr(self.game_manager, 'process_player_command'):
             cmd = self.game_manager.process_player_command
-        
+
         self.send_button = tk.Button(self.input_frame, text="Send", command=cmd)
         self.send_button.pack(side=tk.RIGHT, padx=5, pady=5)
 
@@ -113,14 +113,14 @@ if __name__ == '__main__':
             app_ui.add_story_text(f"Test Mode > {user_text}")
             if app_ui.game_manager and hasattr(app_ui.game_manager, 'process_player_command'):
                 # This part would only run if a mock/real game_manager with the method is passed
-                app_ui.game_manager.process_player_command() 
+                app_ui.game_manager.process_player_command()
             else:
                 app_ui.add_story_text("(No game manager to process command in test mode)")
         else:
             app_ui.add_story_text("Test Mode: You entered nothing.")
 
     app_ui.send_button.config(command=handle_send_button_test_mode)
-    
+
     # Bind the Enter key to the send button's action (or the test mode handler)
     # The button's command is already set to handle_send_button_test_mode if running standalone.
     # If we want the Enter key to also use this test_mode handler:
