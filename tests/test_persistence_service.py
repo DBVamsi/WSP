@@ -6,7 +6,9 @@ import sys
 # Add the parent directory to the Python path to allow importing from game_engine
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from game_engine.persistence_service import setup_database
+from game_engine.persistence_service import setup_database, save_player
+from game_engine.character_manager import Player # Import Player class
+import json # Import json
 
 class TestPersistenceService(unittest.TestCase):
     """
@@ -120,6 +122,67 @@ class TestPersistenceService(unittest.TestCase):
                                  f"Column '{col_name}' has notnull flag '{col_notnull}', expected '{expected_col['notnull']}'.")
             self.assertEqual(col_pk, expected_col['pk'],
                              f"Column '{col_name}' has pk flag '{col_pk}', expected '{expected_col['pk']}'.")
+
+    # Helper function to fetch player data
+    def get_player_from_db(self, player_id):
+        conn = sqlite3.connect(self.test_db_path)
+        cursor = conn.cursor()
+        # Select columns in the order they are defined in the Player object and save_player
+        cursor.execute("""
+            SELECT id, name, hp, max_hp, mp, max_mp, current_location, story_flags
+            FROM players WHERE id = ?
+            """, (player_id,))
+        row = cursor.fetchone()
+        conn.close()
+        return row
+
+    def test_save_player_insert(self):
+        """Tests saving a new player (INSERT case)."""
+        test_player = Player(player_id=1, name="HeroArjuna", hp=100, max_hp=100, mp=50, max_mp=50)
+        test_player.current_location = "Kurukshetra - Camp"
+        test_player.story_flags = {"met_krishna": True, "bow_acquired": False}
+
+        save_player(self.test_db_path, test_player)
+
+        saved_row = self.get_player_from_db(1)
+        self.assertIsNotNone(saved_row, "Player data was not inserted.")
+
+        self.assertEqual(saved_row[0], test_player.player_id)
+        self.assertEqual(saved_row[1], test_player.name)
+        self.assertEqual(saved_row[2], test_player.hp)
+        self.assertEqual(saved_row[3], test_player.max_hp)
+        self.assertEqual(saved_row[4], test_player.mp)
+        self.assertEqual(saved_row[5], test_player.max_mp)
+        self.assertEqual(saved_row[6], test_player.current_location)
+        self.assertEqual(json.loads(saved_row[7]), test_player.story_flags)
+
+    def test_save_player_update(self):
+        """Tests updating an existing player (UPDATE case)."""
+        # Initial save (INSERT)
+        player_id_to_update = 2
+        initial_player = Player(player_id=player_id_to_update, name="Karna", hp=120, max_hp=120, mp=40, max_mp=40)
+        initial_player.current_location = "Anga Kingdom"
+        initial_player.story_flags = {"cursed": True}
+        save_player(self.test_db_path, initial_player)
+
+        # Modify player data
+        modified_player = Player(player_id=player_id_to_update, name="Radheya Karna", hp=110, max_hp=125, mp=35, max_mp=45)
+        modified_player.current_location = "Kurukshetra - Battlefield"
+        modified_player.story_flags = {"cursed": True, "kavacha_kundala_lost": True}
+
+        save_player(self.test_db_path, modified_player)
+
+        updated_row = self.get_player_from_db(player_id_to_update)
+        self.assertIsNotNone(updated_row, "Player data was not found after update attempt.")
+
+        self.assertEqual(updated_row[0], modified_player.player_id)
+        self.assertEqual(updated_row[1], modified_player.name) # Updated name
+        self.assertEqual(updated_row[2], modified_player.hp) # Updated hp
+        self.assertEqual(updated_row[3], modified_player.max_hp) # Updated max_hp
+        self.assertEqual(updated_row[4], modified_player.mp) # Updated mp
+        self.assertEqual(updated_row[5], modified_player.max_mp) # Updated max_mp
+        self.assertEqual(updated_row[6], modified_player.current_location) # Updated location
+        self.assertEqual(json.loads(updated_row[7]), modified_player.story_flags) # Updated flags
 
 if __name__ == '__main__':
     unittest.main()
