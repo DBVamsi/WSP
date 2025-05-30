@@ -6,7 +6,7 @@ import sys
 # Add the parent directory to the Python path to allow importing from game_engine
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from game_engine.persistence_service import setup_database, save_player
+from game_engine.persistence_service import setup_database, save_player, load_player
 from game_engine.character_manager import Player # Import Player class
 import json # Import json
 
@@ -38,6 +38,24 @@ class TestPersistenceService(unittest.TestCase):
             os.remove(self.test_db_path)
         # Call setup_database to create the database and table for each test
         setup_database(self.test_db_path)
+
+        # Player data for testing load_player
+        self.player1_data = {
+            "player_id": 1, "name": "Test Player 1", "hp": 100, "max_hp": 100,
+            "mp": 50, "max_mp": 50, "current_location": "Test Location",
+            "story_flags": {"key1": "value1", "visited_town": True}
+        }
+        player_obj = Player(
+            player_id=self.player1_data["player_id"],
+            name=self.player1_data["name"],
+            hp=self.player1_data["hp"],
+            max_hp=self.player1_data["max_hp"],
+            mp=self.player1_data["mp"],
+            max_mp=self.player1_data["max_mp"]
+        )
+        player_obj.current_location = self.player1_data["current_location"]
+        player_obj.story_flags = self.player1_data["story_flags"]
+        save_player(self.test_db_path, player_obj)
 
     def tearDown(self):
         """
@@ -183,6 +201,25 @@ class TestPersistenceService(unittest.TestCase):
         self.assertEqual(updated_row[5], modified_player.max_mp) # Updated max_mp
         self.assertEqual(updated_row[6], modified_player.current_location) # Updated location
         self.assertEqual(json.loads(updated_row[7]), modified_player.story_flags) # Updated flags
+
+    def test_load_player_exists(self):
+        """Tests loading an existing player from the database."""
+        loaded_player = load_player(self.test_db_path, 1)
+        self.assertIsNotNone(loaded_player, "Failed to load player with ID 1.")
+
+        self.assertEqual(loaded_player.player_id, self.player1_data["player_id"])
+        self.assertEqual(loaded_player.name, self.player1_data["name"])
+        self.assertEqual(loaded_player.hp, self.player1_data["hp"])
+        self.assertEqual(loaded_player.max_hp, self.player1_data["max_hp"])
+        self.assertEqual(loaded_player.mp, self.player1_data["mp"])
+        self.assertEqual(loaded_player.max_mp, self.player1_data["max_mp"])
+        self.assertEqual(loaded_player.current_location, self.player1_data["current_location"])
+        self.assertEqual(loaded_player.story_flags, self.player1_data["story_flags"])
+
+    def test_load_player_not_exists(self):
+        """Tests loading a player that does not exist in the database."""
+        loaded_player = load_player(self.test_db_path, 999)
+        self.assertIsNone(loaded_player, "Loaded a player with ID 999, but it should not exist.")
 
 if __name__ == '__main__':
     unittest.main()

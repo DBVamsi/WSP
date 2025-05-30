@@ -148,6 +148,45 @@ def save_player(db_path: str, player_obj: Player):
         if conn:
             conn.close()
 
+
+def load_player(db_path: str, player_id: int):
+    """
+    Loads a player's state from the database.
+
+    Args:
+        db_path (str): The path to the SQLite database file.
+        player_id (int): The ID of the player to load.
+
+    Returns:
+        Player: The loaded Player object, or None if not found or an error occurs.
+    """
+    conn = None
+    player = None
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT id, name, hp, max_hp, mp, max_mp, current_location, story_flags FROM players WHERE id = ?",
+            (player_id,)
+        )
+        row = cursor.fetchone()
+
+        if row:
+            db_id, name, hp, max_hp, mp, max_mp, current_location, story_flags_json = row
+            story_flags = json.loads(story_flags_json)
+
+            player = Player(player_id=db_id, name=name, hp=hp, max_hp=max_hp, mp=mp, max_mp=max_mp)
+            player.current_location = current_location
+            player.story_flags = story_flags
+
+    except sqlite3.Error as e:
+        print(f"Database error in load_player for player_id {player_id}: {e}")
+    finally:
+        if conn:
+            conn.close()
+    return player
+
 if __name__ == '__main__':
     # ... (existing __main__ block) ...
 
