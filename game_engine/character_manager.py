@@ -2,7 +2,7 @@ class Player:
     """
     Represents a player character in the game.
     """
-    def __init__(self, player_id: int, name: str, hp: int, max_hp: int, mp: int, max_mp: int):
+    def __init__(self, player_id: int, name: str, hp: int, max_hp: int, mp: int, max_mp: int, inventory: list[str] = None):
         """
         Initializes a new Player instance.
 
@@ -13,6 +13,7 @@ class Player:
             max_hp (int): The maximum hit points of the player.
             mp (int): The current mana points of the player.
             max_mp (int): The maximum mana points of the player.
+            inventory (list[str], optional): The player's starting inventory. Defaults to None.
         """
         self.player_id = player_id
         self.name = name
@@ -20,6 +21,7 @@ class Player:
         self.max_hp = max_hp
         self.mp = mp
         self.max_mp = max_mp
+        self.inventory: list[str] = inventory if inventory is not None else []
         self.current_location: str = 'Battlefield - Edge of the Kurukshetra'
         self.story_flags: dict = {}
 
@@ -29,7 +31,7 @@ class Player:
         """
         return (f"Player(player_id={self.player_id}, name='{self.name}', "
                 f"hp={self.hp}/{self.max_hp}, mp={self.mp}/{self.max_mp}, "
-                f"location='{self.current_location}', flags={self.story_flags})")
+                f"location='{self.current_location}', flags={self.story_flags}, inventory={self.inventory})")
 
 if __name__ == '__main__':
     # Example usage:

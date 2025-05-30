@@ -43,7 +43,8 @@ def setup_database(db_path='data/rpg_save.db'):
                 mp INTEGER,
                 max_mp INTEGER,
                 current_location TEXT,
-                story_flags TEXT
+                story_flags TEXT,
+                inventory TEXT
             )
         ''')
 
@@ -84,17 +85,14 @@ def save_player(db_path: str, player_obj: Player):
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # Serialize story_flags
+        # Serialize story_flags and inventory
         story_flags_json = json.dumps(player_obj.story_flags)
-
-        # Placeholder for UPDATE and INSERT logic
-        # This will be expanded to use player_obj.player_id to check existence,
-        # then either UPDATE the existing record or INSERT a new one.
+        inventory_json = json.dumps(player_obj.inventory if hasattr(player_obj, 'inventory') else [])
 
         # Define the SQL UPDATE query
         update_sql = """
         UPDATE players
-        SET name = ?, hp = ?, max_hp = ?, mp = ?, max_mp = ?, current_location = ?, story_flags = ?
+        SET name = ?, hp = ?, max_hp = ?, mp = ?, max_mp = ?, current_location = ?, story_flags = ?, inventory = ?
         WHERE id = ?
         """
 
@@ -107,6 +105,7 @@ def save_player(db_path: str, player_obj: Player):
             player_obj.max_mp,
             player_obj.current_location,
             story_flags_json,
+            inventory_json,
             player_obj.player_id
         )
 
@@ -116,8 +115,8 @@ def save_player(db_path: str, player_obj: Player):
         if cursor.rowcount == 0:
             # Player with this ID doesn't exist, so INSERT
             insert_sql = """
-            INSERT INTO players (id, name, hp, max_hp, mp, max_mp, current_location, story_flags)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO players (id, name, hp, max_hp, mp, max_mp, current_location, story_flags, inventory)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             insert_values = (
                 player_obj.player_id,
@@ -127,7 +126,8 @@ def save_player(db_path: str, player_obj: Player):
                 player_obj.mp,
                 player_obj.max_mp,
                 player_obj.current_location,
-                story_flags_json
+                story_flags_json,
+                inventory_json
             )
             cursor.execute(insert_sql, insert_values)
             print(f"Player {player_obj.player_id} inserted.") # Optional: for logging/debug
@@ -167,18 +167,29 @@ def load_player(db_path: str, player_id: int):
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT id, name, hp, max_hp, mp, max_mp, current_location, story_flags FROM players WHERE id = ?",
+            "SELECT id, name, hp, max_hp, mp, max_mp, current_location, story_flags, inventory FROM players WHERE id = ?",
             (player_id,)
         )
         row = cursor.fetchone()
 
         if row:
-            db_id, name, hp, max_hp, mp, max_mp, current_location, story_flags_json = row
+            db_id, name, hp, max_hp, mp, max_mp, current_location, story_flags_json, inventory_json = row
+
             story_flags = json.loads(story_flags_json)
 
+            inventory = [] # Default to empty list
+            if inventory_json: # Check if inventory_json is not None or empty string
+                try:
+                    inventory = json.loads(inventory_json)
+                except json.JSONDecodeError:
+                    print(f"Error decoding inventory JSON for player_id {player_id}: {inventory_json}")
+                    # Keep inventory as empty list or handle error as appropriate
+
+            # Assuming Player.__init__ might not take inventory directly, or we want to ensure it's handled post-init
             player = Player(player_id=db_id, name=name, hp=hp, max_hp=max_hp, mp=mp, max_mp=max_mp)
             player.current_location = current_location
             player.story_flags = story_flags
+            player.inventory = inventory
 
     except sqlite3.Error as e:
         print(f"Database error in load_player for player_id {player_id}: {e}")
