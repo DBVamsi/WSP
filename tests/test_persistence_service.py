@@ -95,6 +95,8 @@ class TestPersistenceService(unittest.TestCase):
             'max_hp': {'type': 'INTEGER', 'notnull': 0, 'pk': 0},
             'mp': {'type': 'INTEGER', 'notnull': 0, 'pk': 0},
             'max_mp': {'type': 'INTEGER', 'notnull': 0, 'pk': 0},
+            'current_location': {'type': 'TEXT', 'notnull': 0, 'pk': 0},
+            'story_flags': {'type': 'TEXT', 'notnull': 0, 'pk': 0},
         }
 
         self.assertEqual(len(columns_info), len(expected_schema),
