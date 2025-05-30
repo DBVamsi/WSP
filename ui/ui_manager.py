@@ -55,8 +55,22 @@ class GameUI:
         if self.game_manager and hasattr(self.game_manager, 'process_player_command'):
             cmd = self.game_manager.process_player_command
 
+        quit_cmd = None
+        if self.game_manager and hasattr(self.game_manager, 'quit_game'):
+            quit_cmd = self.game_manager.quit_game
+
+        # Pack order matters for side=tk.RIGHT. Last packed is furthest right.
+        # So, pack Send button first if it should be on the far right.
+        # Or, pack Quit button first if it should be on the far right, then Send to its left.
+        # To have Quit on left of Send:
+        # 1. Pack Send (tk.RIGHT)
+        # 2. Pack Quit (tk.RIGHT) - this will put Quit to the left of Send.
+
         self.send_button = tk.Button(self.input_frame, text="Send", command=cmd)
-        self.send_button.pack(side=tk.RIGHT, padx=5, pady=5)
+        self.send_button.pack(side=tk.RIGHT, padx=(0, 5), pady=5) # No left padding for send if quit is next to it
+
+        self.quit_button = tk.Button(self.input_frame, text="Save & Quit", command=quit_cmd)
+        self.quit_button.pack(side=tk.RIGHT, padx=5, pady=5) # padx=(5,0) if send is on right
 
         self.input_entry = tk.Entry(self.input_frame, relief=tk.FLAT) # Added relief
         self.input_entry.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5, pady=5)

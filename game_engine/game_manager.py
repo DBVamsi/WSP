@@ -6,9 +6,12 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from ui.ui_manager import GameUI
-from game_engine.persistence_service import setup_database
+from game_engine.persistence_service import setup_database, save_player, load_player
 from game_engine.input_parser import parse_input
 from game_engine.ai_dm_interface import AIDungeonMaster
+from game_engine.character_manager import Player
+
+DB_PATH = 'data/rpg_save.db'
 
 class GameManager:
     """
@@ -30,23 +33,36 @@ class GameManager:
                 # Depending on the game's needs, might raise error or exit
                 return
 
-        print("GameManager: Setting up database...")
-        setup_database() # Call to set up the database
-        print("GameManager: Database setup complete.")
+        # Ensure the 'data' directory exists - This part can remain early.
+        # The actual DB setup call will be moved as per instructions.
 
         print("GameManager: Initializing UI...")
         self.root = tk.Tk()
         self.ui = GameUI(self.root, self) # Pass GameManager instance to GameUI
         print("GameManager: UI initialized.")
 
+        # Database setup and Player loading, as per subtask instructions
+        print("GameManager: Setting up database (after UI init)...")
+        setup_database(DB_PATH)
+        print("GameManager: Database setup complete.")
+
+        print("GameManager: Loading player...")
+        self.player = load_player(DB_PATH, player_id=1)
+        if self.player is None:
+            print("GameManager: No player found, creating new default player.")
+            self.player = Player(
+                player_id=1, name='Veera', hp=100, max_hp=100, mp=50, max_mp=50,
+                current_location='Kurukshetra - Battlefield Edge',
+                story_flags={'war_just_started': True}
+            )
+            save_player(DB_PATH, self.player)
+            print(f"GameManager: New player '{self.player.name}' created and saved.")
+        else:
+            print(f"GameManager: Player '{self.player.name}' loaded successfully.")
+
         print("GameManager: Initializing AI Dungeon Master...")
-        # It's recommended to load the API key from an environment variable or a secure config
-        # For now, using a placeholder. The AIDungeonMaster class itself will try os.getenv("GOOGLE_API_KEY")
-        # if 'YOUR_GOOGLE_AI_API_KEY_PLACEHOLDER' is passed as None or if the key is invalid.
-        # Passing a specific placeholder string like this will cause AIDungeonMaster to use it directly.
-        # If this placeholder is intended to be replaced by an actual key later, that's fine.
-        # If the intention is for AIDungeonMaster to use its os.getenv logic, pass api_key=None here.
-        self.ai_dm = AIDungeonMaster(api_key='YOUR_GOOGLE_AI_API_KEY_PLACEHOLDER')
+        api_key_from_input = input('Please enter your Google AI API Key: ')
+        self.ai_dm = AIDungeonMaster(api_key=api_key_from_input)
         print("GameManager: AI Dungeon Master initialized.")
 
 
@@ -94,6 +110,23 @@ class GameManager:
         # else:
             # Optionally, handle empty input, e.g., self.ui.add_story_text("Please enter a command.")
             # For now, empty input is silently ignored as per the conditional check.
+
+    def quit_game(self):
+        """
+        Saves the player's state, prints an exit message, and closes the Tkinter window.
+        """
+        if hasattr(self, 'player') and self.player is not None:
+            print(f"GameManager: Saving player '{self.player.name}' before quitting...")
+            save_player(DB_PATH, self.player)
+            print("Game saved. Exiting...")
+        else:
+            print("GameManager: No player data to save. Exiting...")
+
+        if hasattr(self, 'root') and self.root:
+            self.root.destroy()
+        else:
+            print("GameManager: No root window to destroy.")
+
 
 if __name__ == '__main__':
     # This block is for testing the GameManager independently.
