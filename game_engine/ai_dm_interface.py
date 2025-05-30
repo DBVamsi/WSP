@@ -24,7 +24,7 @@ class AIDungeonMaster:
             raise ValueError("API key not provided and GOOGLE_API_KEY environment variable not set.")
 
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        self.model = genai.GenerativeModel('gemini-2.0-flash-lite')
         # Further model configuration (e.g., safety settings, generation config) can be done here
         # self.model.safety_settings = ...
         # self.model.generation_config = ...
@@ -94,7 +94,9 @@ if __name__ == '__main__':
             dm = AIDungeonMaster() # API key loaded from environment
             print("AIDungeonMaster initialized successfully.")
 
-            if "gemini-1.5-flash" in dm.model.model_name:
+            
+            if "gemini-2.0-flash-lite" in dm.model.model_name:
+
                  print(f"Successfully initialized model: {dm.model.model_name}")
             else:
                  print(f"Model name unexpected: {dm.model.model_name}")
