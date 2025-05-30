@@ -75,6 +75,7 @@ The player says: "{player_action}"
 Describe what happens next in 3-5 concise sentences. Be creative, maintain the Indian Mythology theme, and consider the player's current situation and known story flags.
 """
         try:
+            print(f"--- PROMPT SENT TO AI ---\n{prompt_string}\n-------------------------")
             response = self.model.generate_content(prompt_string)
             # Consider adding more robust error checking for response if needed
             return response.text
