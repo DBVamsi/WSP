@@ -20,7 +20,7 @@ class TestAIDungeonMaster(unittest.TestCase):
         """
         dm = AIDungeonMaster(api_key='direct_test_key')
         mock_genai.configure.assert_called_once_with(api_key='direct_test_key')
-        mock_genai.GenerativeModel.assert_called_once_with('gemini-1.5-flash-latest')
+        mock_genai.GenerativeModel.assert_called_once_with('gemini-2.0-flash-lite')
         self.assertEqual(dm.model, mock_genai.GenerativeModel.return_value)
 
     @patch('game_engine.ai_dm_interface.os.getenv')
@@ -33,7 +33,7 @@ class TestAIDungeonMaster(unittest.TestCase):
         dm = AIDungeonMaster() # No api_key argument
         mock_os_getenv.assert_called_once_with("GOOGLE_API_KEY")
         mock_genai.configure.assert_called_once_with(api_key='env_test_key')
-        mock_genai.GenerativeModel.assert_called_once_with('gemini-1.5-flash-latest')
+        mock_genai.GenerativeModel.assert_called_once_with('gemini-2.0-flash-lite')
         self.assertEqual(dm.model, mock_genai.GenerativeModel.return_value)
 
     @patch('game_engine.ai_dm_interface.os.getenv')

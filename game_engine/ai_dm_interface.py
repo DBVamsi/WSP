@@ -94,9 +94,8 @@ if __name__ == '__main__':
             dm = AIDungeonMaster() # API key loaded from environment
             print("AIDungeonMaster initialized successfully.")
 
-            
+            # Updated check for the new model name
             if "gemini-2.0-flash-lite" in dm.model.model_name:
-
                  print(f"Successfully initialized model: {dm.model.model_name}")
             else:
                  print(f"Model name unexpected: {dm.model.model_name}")
