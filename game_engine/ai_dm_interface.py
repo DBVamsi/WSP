@@ -1,5 +1,6 @@
 import google.generativeai as genai
 import os # For potentially loading API key from environment
+from game_engine.character_manager import Player # For type hinting
 
 class AIDungeonMaster:
     """
@@ -51,24 +52,28 @@ class AIDungeonMaster:
             print(f'Error contacting AI DM for initial scene: {e}')
             return 'Error: The mists of creation obscure your vision... Please check your connection or API key.'
 
-    def get_ai_response(self, player_action: str, current_context: str = 'The player is in an area previously described.') -> str:
+    def get_ai_response(self, player_object: Player, player_action: str) -> str:
         """
-        Generates and returns the AI DM's response to a player's action.
+        Generates and returns the AI DM's response to a player's action,
+        considering the player's current state.
 
         Args:
+            player_object (Player): The player character object.
             player_action (str): The action taken by the player.
-            current_context (str, optional): The current context or situation of the game.
-                                             Defaults to 'The player is in an area previously described.'.
 
         Returns:
             str: The AI DM's narrative response to the player's action, or an error message.
         """
-        prompt_string = (
-            f'You are the Dungeon Master for a text-based RPG set in a world inspired by Indian Mythology. '
-            f'The current situation is: {current_context}. '
-            f'The player says: "{player_action}". '
-            f'Describe what happens next in 2-4 concise sentences, keeping the mythology theme in mind.'
-        )
+        prompt_string = f"""You are the Dungeon Master for a text-based RPG inspired by Indian Mythology, focusing on a great war between Devas and Asuras.
+The player is {player_object.name}.
+Player's current status: HP: {player_object.hp}/{player_object.max_hp}, MP: {player_object.mp}/{player_object.max_mp}.
+Player's current location: {player_object.current_location}.
+Key story events/flags known so far: {str(player_object.story_flags)}.
+
+The player says: "{player_action}"
+
+Describe what happens next in 3-5 concise sentences. Be creative, maintain the Indian Mythology theme, and consider the player's current situation and known story flags.
+"""
         try:
             response = self.model.generate_content(prompt_string)
             # Consider adding more robust error checking for response if needed
@@ -108,22 +113,41 @@ if __name__ == '__main__':
             print("\n--- Simulating Player Action ---")
             player_input_action = "I look for a weapon."
             print(f"Player action: {player_input_action}")
-            # Use the initial scene as context, or a more specific one if available
-            context_for_action = initial_scene
-            if "Error:" in initial_scene: # If initial scene failed, use a generic context
-                context_for_action = "The player is standing at the precipice of adventure, the air thick with anticipation."
 
-            ai_narrative = dm.get_ai_response(player_action=player_input_action, current_context=context_for_action)
+            # Create a dummy Player object for the test
+            # In a real game, this would be the actual player object from GameManager
+            class MockPlayer: # Define a simple mock for testing if Player class is not fully available/integrated here
+                def __init__(self, name, hp, max_hp, mp, max_mp, current_location, story_flags):
+                    self.name = name
+                    self.hp = hp
+                    self.max_hp = max_hp
+                    self.mp = mp
+                    self.max_mp = max_mp
+                    self.current_location = current_location
+                    self.story_flags = story_flags
+
+            test_player = MockPlayer(
+                name="TestHero", hp=90, max_hp=100, mp=40, max_mp=50,
+                current_location=initial_scene.splitlines()[0] if "Error:" not in initial_scene else "A mysterious cave", # Use first line of scene
+                story_flags={"found_dagger": False, "met_sage": True}
+            )
+            if "Error:" in initial_scene:
+                 test_player.current_location = "The edge of a swirling vortex of cosmic energy"
+
+
+            ai_narrative = dm.get_ai_response(player_object=test_player, player_action=player_input_action)
             print("\nAI DM's Response:")
             print(ai_narrative)
 
             player_input_action_2 = "I try to meditate to sense my surroundings."
             print(f"\nPlayer action: {player_input_action_2}")
-            context_for_action_2 = ai_narrative # Use previous AI response as new context
-            if "Error:" in ai_narrative:
-                 context_for_action_2 = "Despite the previous error, the player tries to focus."
 
-            ai_narrative_2 = dm.get_ai_response(player_action=player_input_action_2, current_context=context_for_action_2)
+            # Update mock player based on previous response if needed, or keep static for this test
+            if "Error:" not in ai_narrative :
+                test_player.current_location = "A place altered by previous actions" # Example update
+                test_player.story_flags["sensed_danger"] = True
+
+            ai_narrative_2 = dm.get_ai_response(player_object=test_player, player_action=player_input_action_2)
             print("\nAI DM's Response:")
             print(ai_narrative_2)
 

@@ -101,10 +101,13 @@ class GameManager:
             # self.ui.add_story_text(f'Parsed as: {parsed_command}') # Optional debug line
 
             # Get AI response to the player's command
-            # For now, we are not passing any specific context beyond the default
-            # This could be expanded to include recent story text or game state.
-            ai_response = self.ai_dm.get_ai_response(player_action=parsed_command)
-            self.ui.add_story_text(ai_response)
+            # Pass the player object and the parsed command to the AI DM
+            if hasattr(self, 'player') and self.player is not None:
+                ai_response = self.ai_dm.get_ai_response(player_object=self.player, player_action=parsed_command)
+                self.ui.add_story_text(ai_response)
+            else:
+                # This case should ideally not happen if player is always loaded/created in __init__
+                self.ui.add_story_text("Error: Player data is not available. Cannot process command.")
         # else:
             # Optionally, handle empty input, e.g., self.ui.add_story_text("Please enter a command.")
             # For now, empty input is silently ignored as per the conditional check.
