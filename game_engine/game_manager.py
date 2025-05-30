@@ -50,11 +50,9 @@ class GameManager:
         self.player = load_player(DB_PATH, player_id=1)
         if self.player is None:
             print("GameManager: No player found, creating new default player.")
-            self.player = Player(
-                player_id=1, name='Veera', hp=100, max_hp=100, mp=50, max_mp=50,
-                current_location='Kurukshetra - Battlefield Edge',
-                story_flags={'war_just_started': True}
-            )
+            self.player = Player(player_id=1, name='Veera', hp=100, max_hp=100, mp=50, max_mp=50)
+            self.player.current_location = 'Kurukshetra - Battlefield Edge'
+            self.player.story_flags = {'war_just_started': True}
             save_player(DB_PATH, self.player)
             print(f"GameManager: New player '{self.player.name}' created and saved.")
         else:
