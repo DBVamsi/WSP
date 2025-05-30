@@ -126,6 +126,19 @@ Remember to only include keys in `game_state_updates` if their values actually c
 
             response = self.model.generate_content(prompt_string)
             response_text = response.text
+            original_response_text_for_debugging = response_text # Keep a copy for debug log
+
+            # Clean up potential markdown fences around the JSON
+            if response_text.startswith("```json\n") and response_text.endswith("\n```"):
+                response_text = response_text[len("```json\n"):-len("\n```")]
+            elif response_text.startswith("```") and response_text.endswith("```"):
+                lines = response_text.splitlines()
+                if len(lines) > 2 and lines[0] == "```" and lines[-1] == "```":
+                    response_text = "\n".join(lines[1:-1])
+                elif lines[0].startswith("```json") and lines[-1] == "```": # Single line case
+                     response_text = lines[0][len("```json"):].strip()
+                     if response_text.endswith("```"):
+                         response_text = response_text[:-len("```")].strip()
 
             data = json.loads(response_text)
 
@@ -137,14 +150,15 @@ Remember to only include keys in `game_state_updates` if their values actually c
             return narrative, game_state_updates
 
         except json.JSONDecodeError as e:
-            error_message = f"AI response was not valid JSON: {e}\nRaw AI response: {response_text}"
+            error_message = f"AI response was not valid JSON: {e}\nRaw AI response: {original_response_text_for_debugging}"
             print(error_message)
-            return response_text, GameStateUpdates()
+            return original_response_text_for_debugging, GameStateUpdates()
 
         except Exception as e:
             error_message = f"An unexpected error occurred while getting AI response: {e}"
             print(error_message)
-            narrative_error = response_text if response_text else error_message
+            # Use original_response_text_for_debugging if available, otherwise the error_message itself
+            narrative_error = original_response_text_for_debugging if original_response_text_for_debugging else error_message
             return narrative_error, GameStateUpdates()
 
 if __name__ == '__main__':
@@ -172,7 +186,9 @@ if __name__ == '__main__':
                     "new_story_flags": {"mock_flag_set": True}
                 }
             }
-            return MockResponse(text=json.dumps(mock_json_payload))
+            # Simulate AI wrapping the response in markdown ```json ... ```
+            raw_response_with_fences = f"```json\n{json.dumps(mock_json_payload)}\n```"
+            return MockResponse(text=raw_response_with_fences)
 
     class MockPlayer:
         def __init__(self, name, hp, max_hp, mp, max_mp, current_location, story_flags, inventory):
@@ -224,6 +240,7 @@ if __name__ == '__main__':
         player_input_action_2 = "I try to decipher the ancient text."
         print(f"Player action: {player_input_action_2}")
 
+        # Reconfigure MockModel to return malformed JSON for the next call
         dm.model.generate_content = lambda prompt_string: MockResponse(text="This is not valid JSON {oops")
 
         narrative_2, game_updates_2 = dm.get_ai_response(player_object=test_player, player_action=player_input_action_2)
@@ -232,6 +249,36 @@ if __name__ == '__main__':
         print(narrative_2)
         print("\nGame State Updates (should be default/empty):")
         print(f"  Inventory Add: {game_updates_2.inventory_add}")
+
+        print("\n--- Simulating Player Action (JSON wrapped in ```) ---")
+        player_input_action_3 = "Test with triple backticks"
+        print(f"Player action: {player_input_action_3}")
+
+        # Reconfigure MockModel to return JSON wrapped only in ```
+        # mock_json_payload is defined above in the MockModel's original generate_content
+        # Need to ensure it's accessible here or redefine it. For simplicity, assume it's accessible
+        # or redefine it if this lambda is in a different scope where it's not.
+        # For this test, let's re-create it for clarity within this lambda's scope.
+        mock_json_payload_for_test3 = {
+            "narrative": "Narrative for triple-backtick test.",
+            "game_state_updates": {
+                "inventory_add": ["triple-backtick item"],
+                "mp_change": 10
+            }
+        }
+        dm.model.generate_content = lambda prompt_string: MockResponse(text=f"```\n{json.dumps(mock_json_payload_for_test3)}\n```")
+
+        narrative_3, game_updates_3 = dm.get_ai_response(player_object=test_player, player_action=player_input_action_3)
+        print("\n--- Parsed AI Response (Triple Backticks Test) ---")
+        print("Narrative:")
+        print(narrative_3)
+        print("\nGame State Updates:")
+        print(f"  Inventory Add: {game_updates_3.inventory_add}")
+        print(f"  Inventory Remove: {game_updates_3.inventory_remove}")
+        print(f"  HP Change: {game_updates_3.hp_change}")
+        print(f"  MP Change: {game_updates_3.mp_change}")
+        print(f"  New Story Flags: {game_updates_3.new_story_flags}")
+        print(f"  New Location: {game_updates_3.new_location}")
 
     except ValueError as e:
         print(f"Error during example execution: {e}")
