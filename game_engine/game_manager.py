@@ -53,10 +53,16 @@ class GameManager:
             self.player = Player(player_id=1, name='Veera', hp=100, max_hp=100, mp=50, max_mp=50)
             self.player.current_location = 'Kurukshetra - Battlefield Edge'
             self.player.story_flags = {'war_just_started': True}
+            self.player.inventory = ["a simple dagger", "a healing herb"] # Default inventory
             save_player(DB_PATH, self.player)
-            print(f"GameManager: New player '{self.player.name}' created and saved.")
+            print(f"GameManager: New player '{self.player.name}' created and saved with default inventory.")
+            print(f"GameManager: New player '{self.player.name}' created and saved with default inventory.")
         else:
             print(f"GameManager: Player '{self.player.name}' loaded successfully.")
+            # Optional: Log loaded inventory
+            if hasattr(self.player, 'inventory'):
+                print(f"GameManager: Player '{self.player.name}' inventory: {self.player.inventory}")
+
 
         print("GameManager: Initializing AI Dungeon Master...")
         api_key_from_input = input('Please enter your Google AI API Key: ')

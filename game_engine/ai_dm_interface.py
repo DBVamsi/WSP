@@ -69,6 +69,7 @@ The player is {player_object.name}.
 Player's current status: HP: {player_object.hp}/{player_object.max_hp}, MP: {player_object.mp}/{player_object.max_mp}.
 Player's current location: {player_object.current_location}.
 Key story events/flags known so far: {str(player_object.story_flags)}.
+Player's inventory: {str(player_object.inventory if hasattr(player_object, 'inventory') else [])}.
 
 The player says: "{player_action}"
 
@@ -118,7 +119,7 @@ if __name__ == '__main__':
             # Create a dummy Player object for the test
             # In a real game, this would be the actual player object from GameManager
             class MockPlayer: # Define a simple mock for testing if Player class is not fully available/integrated here
-                def __init__(self, name, hp, max_hp, mp, max_mp, current_location, story_flags):
+                def __init__(self, name, hp, max_hp, mp, max_mp, current_location, story_flags, inventory):
                     self.name = name
                     self.hp = hp
                     self.max_hp = max_hp
@@ -126,11 +127,13 @@ if __name__ == '__main__':
                     self.max_mp = max_mp
                     self.current_location = current_location
                     self.story_flags = story_flags
+                    self.inventory = inventory
 
             test_player = MockPlayer(
                 name="TestHero", hp=90, max_hp=100, mp=40, max_mp=50,
                 current_location=initial_scene.splitlines()[0] if "Error:" not in initial_scene else "A mysterious cave", # Use first line of scene
-                story_flags={"found_dagger": False, "met_sage": True}
+                story_flags={"found_dagger": False, "met_sage": True},
+                inventory=["a rusty sword", "some dried rations", "a mysterious amulet"]
             )
             if "Error:" in initial_scene:
                  test_player.current_location = "The edge of a swirling vortex of cosmic energy"
