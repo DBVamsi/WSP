@@ -66,12 +66,12 @@ class TestAIDungeonMaster(unittest.TestCase):
         scene = dm.get_initial_scene_description()
 
         # Check that generate_content was called (can also check prompt if needed)
-        mock_model_instance.generate_content.assert_called_once() 
+        mock_model_instance.generate_content.assert_called_once()
         # Example of checking the prompt:
         # expected_prompt_part = 'You are a Dungeon Master'
         # called_prompt = mock_model_instance.generate_content.call_args[0][0]
         # self.assertIn(expected_prompt_part, called_prompt)
-        
+
         self.assertEqual(scene, "A mystical forest appears before you.")
 
     @patch('builtins.print') # Mock the print function
@@ -106,12 +106,12 @@ class TestAIDungeonMaster(unittest.TestCase):
         mock_model_instance.generate_content.return_value = mock_response_obj
 
         dm = AIDungeonMaster(api_key='test_key_response')
-        
+
         # Test with specific context
         player_action = "look around"
         current_context = "A dark cave."
         response_text = dm.get_ai_response(player_action, current_context)
-        
+
         expected_prompt = (
             f'You are the Dungeon Master for a text-based RPG set in a world inspired by Indian Mythology. '
             f'The current situation is: {current_context}. '
@@ -124,7 +124,7 @@ class TestAIDungeonMaster(unittest.TestCase):
         # Test with default context
         mock_model_instance.generate_content.reset_mock() # Reset mock for the next call
         # Re-assign return_value as reset_mock might clear it if it was a one-time config
-        mock_model_instance.generate_content.return_value = mock_response_obj 
+        mock_model_instance.generate_content.return_value = mock_response_obj
 
         response_text_default_ctx = dm.get_ai_response(player_action)
         expected_prompt_default_ctx = (

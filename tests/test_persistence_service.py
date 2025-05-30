@@ -107,7 +107,7 @@ class TestPersistenceService(unittest.TestCase):
             col_pk = col_info[5]
 
             self.assertIn(col_name, expected_schema, f"Unexpected column '{col_name}' found.")
-            
+
             expected_col = expected_schema[col_name]
             self.assertEqual(col_type, expected_col['type'],
                              f"Column '{col_name}' has type '{col_type}', expected '{expected_col['type']}'.")

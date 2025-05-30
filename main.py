@@ -11,10 +11,10 @@ def main():
     print("Main: Initializing GameManager...")
     game_manager = GameManager()
     print("Main: GameManager initialized.")
-    
+
     print("Main: Starting game...")
     game_manager.start_game() # This will initialize DB, UI, and start the UI loop
-    
+
     print("Main: Game has finished or UI was closed.")
 
 if __name__ == '__main__':
