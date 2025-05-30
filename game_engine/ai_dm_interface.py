@@ -85,7 +85,7 @@ The `"game_state_updates"` object can contain the following keys:
     -   `"inventory_remove"`: (list of strings) Items removed from the player's inventory. Example: `["broken shield"]`. Default: `[]`.
     -   `"hp_change"`: (integer) Change in player's HP (e.g., -10 for damage, 20 for healing). Default: `0`.
     -   `"mp_change"`: (integer) Change in player's MP. Default: `0`.
-    -   `"new_story_flags"`: (object) New story flags to be set or updated. Example: `{{"met_sage": true, "artifact_found": false}}`. Default: `{}`.
+    -   `"new_story_flags"`: (object) New story flags to be set or updated. Example: `{{"met_sage": true, "artifact_found": false}}`. Default: `{{}}`.
     -   `"new_location"`: (string or null) The new location of the player, if they moved. Example: `"The Enchanted Forest"`. Default: `null`.
 
 Example of a complete JSON response:
@@ -127,23 +127,21 @@ Remember to only include keys in `game_state_updates` if their values actually c
             response = self.model.generate_content(prompt_string)
             response_text = response.text
 
-            # Attempt to parse the entire response_text as JSON
             data = json.loads(response_text)
 
-            narrative = data.get("narrative", "The AI did not provide a narrative.") # Default narrative
+            narrative = data.get("narrative", "The AI did not provide a narrative.")
             updates_dict = data.get("game_state_updates", {})
 
-            game_state_updates = GameStateUpdates(**updates_dict) # Validate and structure with Pydantic
+            game_state_updates = GameStateUpdates(**updates_dict)
 
             return narrative, game_state_updates
 
         except json.JSONDecodeError as e:
             error_message = f"AI response was not valid JSON: {e}\nRaw AI response: {response_text}"
             print(error_message)
-            # Fallback: return the raw response text as narrative, and default (empty) updates
             return response_text, GameStateUpdates()
 
-        except Exception as e: # Catch other potential errors (e.g., network issues, API errors)
+        except Exception as e:
             error_message = f"An unexpected error occurred while getting AI response: {e}"
             print(error_message)
             narrative_error = response_text if response_text else error_message
@@ -189,16 +187,11 @@ if __name__ == '__main__':
     # --- End Mock classes ---
 
     try:
-        # Replace real AI DM with a mock for predictable testing without API key
-        dm = AIDungeonMaster(api_key="FAKE_API_KEY_FOR_TESTING") # api_key is mandatory
-        dm.model = MockModel() # Replace the actual model with our mock
+        dm = AIDungeonMaster(api_key="FAKE_API_KEY_FOR_TESTING")
+        dm.model = MockModel()
 
         print("AIDungeonMaster initialized with MockModel successfully.")
 
-        # Initial scene description (can also be mocked if needed, but not the focus here)
-        # print("\nAttempting to get initial scene description...")
-        # initial_scene = dm.get_initial_scene_description() # This would use the real model if not overridden
-        # For this test, let's assume a generic initial scene:
         initial_scene = "You find yourself in a dimly lit antechamber. The air is heavy with the scent of incense."
         print("\nInitial Scene (Assumed for test):")
         print(initial_scene)
@@ -231,16 +224,14 @@ if __name__ == '__main__':
         player_input_action_2 = "I try to decipher the ancient text."
         print(f"Player action: {player_input_action_2}")
 
-        # Configure MockModel to return malformed JSON for the next call
         dm.model.generate_content = lambda prompt_string: MockResponse(text="This is not valid JSON {oops")
 
         narrative_2, game_updates_2 = dm.get_ai_response(player_object=test_player, player_action=player_input_action_2)
         print("\n--- Parsed AI Response (Malformed JSON Test) ---")
         print("Narrative:")
-        print(narrative_2) # Should contain the error message and raw response
+        print(narrative_2)
         print("\nGame State Updates (should be default/empty):")
         print(f"  Inventory Add: {game_updates_2.inventory_add}")
-
 
     except ValueError as e:
         print(f"Error during example execution: {e}")
