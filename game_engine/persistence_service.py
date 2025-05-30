@@ -21,7 +21,9 @@ def setup_database(db_path='data/rpg_save.db'):
                 hp INTEGER,
                 max_hp INTEGER,
                 mp INTEGER,
-                max_mp INTEGER
+                max_mp INTEGER,
+                current_location TEXT,
+                story_flags TEXT
             )
         ''')
 
