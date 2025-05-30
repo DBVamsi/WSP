@@ -10,6 +10,7 @@ from game_engine.persistence_service import setup_database, save_player, load_pl
 from game_engine.input_parser import parse_input
 from game_engine.ai_dm_interface import AIDungeonMaster
 from game_engine.character_manager import Player
+from .common_types import GameStateUpdates # Import for type hinting and usage
 
 DB_PATH = 'data/rpg_save.db'
 
@@ -55,7 +56,6 @@ class GameManager:
             self.player.story_flags = {'war_just_started': True}
             self.player.inventory = ["a simple dagger", "a healing herb"] # Default inventory
             save_player(DB_PATH, self.player)
-            print(f"GameManager: New player '{self.player.name}' created and saved with default inventory.")
             print(f"GameManager: New player '{self.player.name}' created and saved with default inventory.")
         else:
             print(f"GameManager: Player '{self.player.name}' loaded successfully.")
@@ -109,8 +109,50 @@ class GameManager:
             # Get AI response to the player's command
             # Pass the player object and the parsed command to the AI DM
             if hasattr(self, 'player') and self.player is not None:
-                ai_response = self.ai_dm.get_ai_response(player_object=self.player, player_action=parsed_command)
-                self.ui.add_story_text(ai_response)
+                narrative, game_updates = self.ai_dm.get_ai_response(player_object=self.player, player_action=parsed_command)
+
+                self.ui.add_story_text(narrative) # Display the narrative from AI
+
+                # Apply game state updates received from the AI
+                if game_updates: # game_updates will be an instance of GameStateUpdates
+                    # Apply inventory changes
+                    if game_updates.inventory_add:
+                        for item in game_updates.inventory_add:
+                            self.player.inventory.append(item)
+                            self.ui.add_story_text(f"[System: '{item}' added to inventory.]")
+
+                    if game_updates.inventory_remove:
+                        for item in game_updates.inventory_remove:
+                            if item in self.player.inventory:
+                                self.player.inventory.remove(item)
+                                self.ui.add_story_text(f"[System: '{item}' removed from inventory.]")
+                            else:
+                                self.ui.add_story_text(f"[System: Tried to remove '{item}', but it wasn't in inventory.]")
+
+                    # Apply HP changes
+                    if game_updates.hp_change != 0:
+                        self.player.hp += game_updates.hp_change
+                        self.player.hp = max(0, min(self.player.hp, self.player.max_hp)) # Clamp HP
+                        self.ui.add_story_text(f"[System: HP changed by {game_updates.hp_change}. Current HP: {self.player.hp}/{self.player.max_hp}]")
+
+                    # Apply MP changes
+                    if game_updates.mp_change != 0:
+                        self.player.mp += game_updates.mp_change
+                        self.player.mp = max(0, min(self.player.mp, self.player.max_mp)) # Clamp MP
+                        self.ui.add_story_text(f"[System: MP changed by {game_updates.mp_change}. Current MP: {self.player.mp}/{self.player.max_mp}]")
+
+                    # Apply story flag changes
+                    if game_updates.new_story_flags:
+                        self.player.story_flags.update(game_updates.new_story_flags)
+                        self.ui.add_story_text(f"[System: Story flags updated: {game_updates.new_story_flags}]")
+
+                    # Apply location changes
+                    if game_updates.new_location and game_updates.new_location != self.player.current_location:
+                        self.player.current_location = game_updates.new_location
+                        self.ui.add_story_text(f"[System: Location changed to: {self.player.current_location}]")
+
+                    # Optional: Log the full state of the player after updates for debugging
+                    # print(f"Player state after updates: {self.player}")
             else:
                 # This case should ideally not happen if player is always loaded/created in __init__
                 self.ui.add_story_text("Error: Player data is not available. Cannot process command.")
