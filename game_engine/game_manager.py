@@ -162,6 +162,13 @@ class GameManager:
                     # Optional: Log the full state of the player after updates for debugging
                     # print(f"Player state after updates: {self.player}")
 
+                    # Apply player name change
+                    if game_updates.player_name and isinstance(game_updates.player_name, str) and game_updates.player_name.strip():
+                        if self.player.name != game_updates.player_name:
+                            old_name = self.player.name
+                            self.player.name = game_updates.player_name.strip()
+                            self.ui.add_story_text(f"[System: Player name changed from '{old_name}' to '{self.player.name}'.]")
+
                     # Refresh the UI display with the new player state
                     if self.player and hasattr(self.ui, 'update_player_display'):
                         self.ui.update_player_display(self.player)
