@@ -299,6 +299,7 @@ async function handleMapClick(event) {
 
 // --- Function to send command to Python ---
 async function sendCommand() {
+    console.log("JS DEBUG: sendCommand() function execution started.");
     const commandInput = document.getElementById('commandInput');
     const command = commandInput.value.trim();
     if (command) {
@@ -311,14 +312,17 @@ async function sendCommand() {
         }
         commandInput.value = ''; // Clear input field
     }
+    console.log("JS DEBUG: sendCommand() function execution finished.");
 }
 
 // --- Initialization and Event Listeners ---
 document.addEventListener('DOMContentLoaded', (event) => {
     const commandInput = document.getElementById('commandInput');
     if(commandInput) {
-        commandInput.addEventListener('keypress', function (e) {
+        commandInput.addEventListener('keypress', function (e) { // 'e' is the event object
             if (e.key === 'Enter') {
+                console.log("JS DEBUG: Enter key pressed in commandInput, attempting to call sendCommand(). Event type: " + e.type);
+                e.preventDefault();
                 sendCommand();
             }
         });
@@ -326,7 +330,10 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     const sendCmdButton = document.getElementById('sendCommandButton');
     if (sendCmdButton) {
-        sendCmdButton.addEventListener('click', sendCommand);
+        sendCmdButton.addEventListener('click', function(event) { // Wrap to access event
+            console.log("JS DEBUG: SendCommandButton clicked, attempting to call sendCommand(). Event type: " + event.type);
+            sendCommand();
+        });
     }
 
     const gameMapElement = document.getElementById('gameMap');
