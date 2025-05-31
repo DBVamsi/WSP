@@ -9,6 +9,7 @@ import sys # For path manipulation if character_manager is in a different relati
 # A more robust way for direct execution might involve adding parent dir if files are in subdirs.
 try:
     from game_engine.character_manager import Player
+    from .common_types import AdventureLog # Added import
 except ImportError:
     # This block is to allow the script to run directly for its own testing
     # if game_engine is not in the Python path (e.g. when running from the directory itself)
@@ -47,10 +48,21 @@ def setup_database(db_path='data/rpg_save.db'):
                 inventory TEXT
             )
         ''')
+        conn.commit() # Commit table creation before altering
 
-        conn.commit()
+        # Add adventure_log column if it doesn't exist
+        try:
+            cursor.execute("ALTER TABLE players ADD COLUMN adventure_log TEXT;")
+            conn.commit()
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" in str(e).lower():
+                # Column already exists, which is fine
+                pass
+            else:
+                # Another OperationalError, raise it
+                raise
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
+        print(f"Database error in setup_database: {e}")
     finally:
         if conn:
             conn.close()
@@ -85,14 +97,21 @@ def save_player(db_path: str, player_obj: Player):
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # Serialize story_flags and inventory
+        # Serialize story_flags, inventory, and adventure_log
         story_flags_json = json.dumps(player_obj.story_flags)
         inventory_json = json.dumps(player_obj.inventory if hasattr(player_obj, 'inventory') else [])
+        adventure_log_json = None
+        if hasattr(player_obj, 'adventure_log') and player_obj.adventure_log:
+            try:
+                adventure_log_json = player_obj.adventure_log.model_dump_json()
+            except AttributeError: # Fallback for Pydantic v1
+                adventure_log_json = player_obj.adventure_log.json()
+
 
         # Define the SQL UPDATE query
         update_sql = """
         UPDATE players
-        SET name = ?, hp = ?, max_hp = ?, mp = ?, max_mp = ?, current_location = ?, story_flags = ?, inventory = ?
+        SET name = ?, hp = ?, max_hp = ?, mp = ?, max_mp = ?, current_location = ?, story_flags = ?, inventory = ?, adventure_log = ?
         WHERE id = ?
         """
 
@@ -106,6 +125,7 @@ def save_player(db_path: str, player_obj: Player):
             player_obj.current_location,
             story_flags_json,
             inventory_json,
+            adventure_log_json, # Added adventure_log_json
             player_obj.player_id
         )
 
@@ -115,8 +135,8 @@ def save_player(db_path: str, player_obj: Player):
         if cursor.rowcount == 0:
             # Player with this ID doesn't exist, so INSERT
             insert_sql = """
-            INSERT INTO players (id, name, hp, max_hp, mp, max_mp, current_location, story_flags, inventory)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO players (id, name, hp, max_hp, mp, max_mp, current_location, story_flags, inventory, adventure_log)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             insert_values = (
                 player_obj.player_id,
@@ -127,7 +147,8 @@ def save_player(db_path: str, player_obj: Player):
                 player_obj.max_mp,
                 player_obj.current_location,
                 story_flags_json,
-                inventory_json
+                inventory_json,
+                adventure_log_json # Added adventure_log_json
             )
             cursor.execute(insert_sql, insert_values)
             print(f"Player {player_obj.player_id} inserted.") # Optional: for logging/debug
@@ -167,13 +188,13 @@ def load_player(db_path: str, player_id: int):
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT id, name, hp, max_hp, mp, max_mp, current_location, story_flags, inventory FROM players WHERE id = ?",
+            "SELECT id, name, hp, max_hp, mp, max_mp, current_location, story_flags, inventory, adventure_log FROM players WHERE id = ?", # Added adventure_log
             (player_id,)
         )
         row = cursor.fetchone()
 
         if row:
-            db_id, name, hp, max_hp, mp, max_mp, current_location, story_flags_json, inventory_json = row
+            db_id, name, hp, max_hp, mp, max_mp, current_location, story_flags_json, inventory_json, adventure_log_json = row # Added adventure_log_json
 
             story_flags = json.loads(story_flags_json)
 
@@ -186,10 +207,22 @@ def load_player(db_path: str, player_id: int):
                     # Keep inventory as empty list or handle error as appropriate
 
             # Assuming Player.__init__ might not take inventory directly, or we want to ensure it's handled post-init
-            player = Player(player_id=db_id, name=name, hp=hp, max_hp=max_hp, mp=mp, max_mp=max_mp)
+            # Assuming Player.__init__ might not take inventory directly, or we want to ensure it's handled post-init
+            player = Player(player_id=db_id, name=name, hp=hp, max_hp=max_hp, mp=mp, max_mp=max_mp) # AdventureLog will be default
             player.current_location = current_location
             player.story_flags = story_flags
             player.inventory = inventory
+
+            if adventure_log_json:
+                try:
+                    player.adventure_log = AdventureLog.model_validate_json(adventure_log_json)
+                except AttributeError: # Fallback for Pydantic v1
+                    player.adventure_log = AdventureLog.parse_raw(adventure_log_json)
+                except Exception as e: # Catch potential Pydantic validation errors
+                    print(f"Error decoding AdventureLog JSON for player_id {player_id}: {e}")
+                    player.adventure_log = AdventureLog() # Default to empty log on error
+            else:
+                player.adventure_log = AdventureLog() # Initialize new log if none in DB
 
     except sqlite3.Error as e:
         print(f"Database error in load_player for player_id {player_id}: {e}")
@@ -206,18 +239,47 @@ if __name__ == '__main__':
     # Create a dummy Player object for testing
     # Ensure this matches the Player class definition in character_manager.py
     # For this to run, Player class must be importable
-    if 'Player' in globals(): # Check if Player class was successfully imported
-        test_player = Player(player_id=1, name="TestHero", hp=90, max_hp=110, mp=40, max_mp=60)
-        test_player.current_location = "Starting Village"
-        test_player.story_flags = {"quest_started": True, "met_npc_rava": False}
+    if 'Player' in globals() and 'AdventureLog' in globals(): # Check if Player and AdventureLog classes were successfully imported
+        print("\n--- Testing save_player and load_player with AdventureLog ---")
+        db_path_main = 'data/rpg_save_main_test.db' # Use a distinct DB for this test
+        if not os.path.exists(os.path.dirname(db_path_main)):
+            os.makedirs(os.path.dirname(db_path_main))
+        setup_database(db_path_main) # Ensure table exists with adventure_log column
 
-        # Use the default db_path from setup_database or specify one
-        db_to_save = 'data/rpg_save.db'
-        if not os.path.exists(os.path.dirname(db_to_save)):
-             os.makedirs(os.path.dirname(db_to_save))
-        setup_database(db_to_save) # Ensure table exists
+        # Create a Player object
+        player_to_save = Player(player_id=101, name="LogHero", hp=100, max_hp=100, mp=50, max_mp=50)
+        player_to_save.current_location = "Library of Scribes"
+        player_to_save.inventory = ["Ancient Tome", "Quill"]
+        # Add an entry to the adventure log
+        if player_to_save.adventure_log: # Should exist by default
+            from game_engine.common_types import AdventureLogEntry # Import for test entry
+            log_entry = AdventureLogEntry(type="test_event", content="Player created for persistence test.", turn_number=1)
+            player_to_save.adventure_log.entries.append(log_entry)
 
-        save_player(db_path=db_to_save, player_obj=test_player)
-        print("save_player test completed.")
+        # Save the player
+        save_player(db_path=db_path_main, player_obj=player_to_save)
+        print(f"Player '{player_to_save.name}' saved with {len(player_to_save.adventure_log.entries)} log entries.")
+
+        # Load the player
+        loaded_player = load_player(db_path=db_path_main, player_id=player_to_save.player_id)
+
+        if loaded_player:
+            print(f"Player '{loaded_player.name}' loaded.")
+            print(f"  HP: {loaded_player.hp}/{loaded_player.max_hp}")
+            print(f"  Location: {loaded_player.current_location}")
+            print(f"  Inventory: {loaded_player.inventory}")
+            if loaded_player.adventure_log:
+                print(f"  Adventure Log Entries: {len(loaded_player.adventure_log.entries)}")
+                if loaded_player.adventure_log.entries:
+                    print(f"    Last entry: {loaded_player.adventure_log.entries[-1].type} - '{loaded_player.adventure_log.entries[-1].content}' at turn {loaded_player.adventure_log.entries[-1].turn_number}")
+            else:
+                print("  Adventure Log: Not found or empty.")
+        else:
+            print(f"Failed to load player {player_to_save.player_id}.")
+
+        # Clean up the test database file
+        # os.remove(db_path_main)
+        # print(f"Cleaned up test database: {db_path_main}")
+
     else:
-        print("Player class not available, skipping save_player test in __main__.")
+        print("Player or AdventureLog class not available, skipping save/load test in __main__.")

@@ -11,7 +11,7 @@ from game_engine.persistence_service import setup_database, save_player, load_pl
 from game_engine.input_parser import parse_input
 from game_engine.ai_dm_interface import AIDungeonMaster
 from game_engine.character_manager import Player
-from .common_types import GameStateUpdates # Import for type hinting and usage
+from .common_types import GameStateUpdates, AdventureLogEntry # Import for type hinting and usage
 # ui.web_ui_manager is imported in main.py and instance is passed
 
 DB_PATH = 'data/rpg_save.db'
@@ -29,6 +29,7 @@ class GameManager:
         self.ui = ui_manager # Store the passed WebUIManager instance
         self.player: Player | None = None
         self.ai_dm: AIDungeonMaster | None = None
+        self.turn_number: int = 0
 
         data_dir = 'data'
         if not os.path.exists(data_dir):
@@ -93,7 +94,33 @@ class GameManager:
             self.ui.add_story_text("[System Error: AI Dungeon Master not initialized. Cannot start game.]")
             return
 
-        initial_description = self.ai_dm.get_initial_scene_description()
+        # Initialize turn_number based on loaded adventure log
+        if self.player.adventure_log and self.player.adventure_log.entries:
+            self.turn_number = self.player.adventure_log.entries[-1].turn_number
+        else:
+            self.turn_number = 0
+
+        initial_description = "" # Initialize
+        if self.player and self.player.adventure_log and self.player.adventure_log.entries:
+            # Log exists and has entries, try to get continuation from AI
+            # This assumes self.ai_dm will have a method get_scene_description_from_log
+            # The actual implementation of that AI method is in the next plan step.
+            # For now, we are just adding the call to it.
+            print("GameManager: Adventure log found, attempting to get continuation from AI.") # For logging
+            try:
+                # Pass the full player object, as the AI prompt might need other player details too.
+                initial_description = self.ai_dm.get_scene_description_from_log(self.player)
+            except AttributeError:
+                # Fallback if the method doesn't exist yet on ai_dm (it will be added next)
+                print("GameManager: ai_dm.get_scene_description_from_log not yet implemented. Falling back to initial scene.")
+                initial_description = self.ai_dm.get_initial_scene_description()
+            except Exception as e:
+                print(f"GameManager: Error getting scene description from log: {e}. Falling back.")
+                initial_description = self.ai_dm.get_initial_scene_description() # Fallback on any error
+        else:
+            # No log or log is empty, get standard initial scene
+            print("GameManager: No adventure log found or log is empty. Getting initial scene description.") # For logging
+            initial_description = self.ai_dm.get_initial_scene_description()
         self.ui.add_story_text(initial_description)
         self.ui.update_player_display(self.player)
 
@@ -121,8 +148,20 @@ class GameManager:
             self.ui.add_story_text("[System Error: Game not fully initialized. Cannot process command.]")
             return
 
+        self.turn_number += 1
+
         # command_string is already provided by JS
         stripped_command = command_string.strip()
+
+        # Log player action
+        player_log_entry = AdventureLogEntry(
+            type="player_action",
+            content=stripped_command,
+            turn_number=self.turn_number
+        )
+        if self.player.adventure_log: # Should always exist due to Player.__init__
+            self.player.adventure_log.entries.append(player_log_entry)
+        # else: self.player.adventure_log = AdventureLog(entries=[player_log_entry]) # Safeguard
 
         parsed_result = parse_input(command_string) # Normalizes and splits
         command_verb = parsed_result['command']
@@ -141,6 +180,22 @@ class GameManager:
             player_action=player_action_for_ai
         )
         self.ui.add_story_text(narrative)
+
+        # Log AI output
+        ai_log_entry = AdventureLogEntry(
+            type="ai_output",
+            content=narrative, # Store the narrative text
+            turn_number=self.turn_number
+        )
+        if self.player.adventure_log:
+            self.player.adventure_log.entries.append(ai_log_entry)
+
+        # Log Trimming Logic
+        if self.player.adventure_log and self.player.adventure_log.entries:
+            max_entries = self.player.adventure_log.max_entries
+            current_length = len(self.player.adventure_log.entries)
+            if current_length > max_entries:
+                self.player.adventure_log.entries = self.player.adventure_log.entries[current_length - max_entries:]
 
         if game_updates:
             if game_updates.skill_used:

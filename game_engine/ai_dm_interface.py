@@ -2,7 +2,7 @@ import google.generativeai as genai
 import os # For potentially loading API key from environment
 import json # For parsing AI response
 from game_engine.character_manager import Player # For type hinting
-from .common_types import GameStateUpdates # For structuring game state updates
+from .common_types import GameStateUpdates, AdventureLog, AdventureLogEntry # For structuring game state updates and adventure log
 
 class AIDungeonMaster:
     """
@@ -178,6 +178,51 @@ Ensure your output is a single, valid JSON object. Only include changed fields i
             narrative_error = original_response_text_for_debugging if original_response_text_for_debugging else error_message
             return narrative_error, GameStateUpdates()
 
+    def get_scene_description_from_log(self, player_object: Player) -> str:
+        """
+        Generates a scene description for a continued game based on the player's adventure log.
+        """
+        if not player_object.adventure_log or not player_object.adventure_log.entries:
+            # This case should ideally be handled by GameManager, but as a safeguard:
+            print("AI_DM: get_scene_description_from_log called with empty or no log. Falling back to initial scene logic.")
+            return self.get_initial_scene_description()
+
+        # Format the adventure log entries for the prompt
+        log_summary = "\n".join([
+            f"- Turn {entry.turn_number} ({entry.type}): {entry.content}"
+            for entry in player_object.adventure_log.entries
+        ])
+
+        prompt_string = f"""You are a Dungeon Master for a text-based RPG set in a world inspired by Indian Mythology, focusing on a great war between Devas and Asuras.
+The player, {player_object.name}, is resuming their adventure.
+Here's a summary of what happened recently (The Adventure Log):
+{log_summary}
+
+Current Player Status:
+- HP: {player_object.hp}/{player_object.max_hp}
+- MP: {player_object.mp}/{player_object.max_mp}
+- Location: {player_object.current_location}
+- Inventory: {str(player_object.inventory if hasattr(player_object, 'inventory') else [])}
+- Skills: {str(player_object.skills) if hasattr(player_object, 'skills') else 'None'}
+- Key Story Flags: {str(player_object.story_flags)}
+
+Based on this log and the player's current state, provide a brief (2-3 concise sentences) re-orienting narrative to smoothly continue their adventure. This narrative should bridge from the last log entry and set the immediate scene. Do not ask questions, just describe the situation.
+"""
+        try:
+            print(f"--- PROMPT SENT TO AI (for continuation) ---\n{prompt_string}\n-------------------------")
+            response = self.model.generate_content(prompt_string)
+            # Consider adding more robust error checking for response if needed,
+            # e.g., checking response.prompt_feedback for block reasons.
+            if response.text:
+                return response.text
+            else:
+                # Handle cases where response.text might be empty or None if API behaves unexpectedly
+                print('AI DM: Received empty response for continuation prompt.')
+                return "The threads of fate are tangled. You find yourself in a familiar yet subtly changed setting..." # Fallback
+        except Exception as e:
+            print(f'Error contacting AI DM for continuation scene: {e}')
+            return 'Error: The mists of time swirl, obscuring your path forward for a moment... Please try again or check your connection.'
+
 if __name__ == '__main__':
     # Example Usage (requires GOOGLE_API_KEY to be set in the environment or passed directly)
     # Ensure you have the google-generativeai and pydantic packages installed
@@ -202,7 +247,10 @@ if __name__ == '__main__':
 
             # Simulate a JSON response based on player action
             # Order of checks matters if prompts could contain multiple keywords.
-            if "curse" in prompt_string:
+            if "resuming their adventure" in prompt_string: # Check for continuation prompt
+                print("DEBUG: MockModel matched 'resuming their adventure' for get_scene_description_from_log")
+                return MockResponse(text="Mock: The air crackles with anticipation as you step back into the fray. The path ahead is clear.")
+            elif "curse" in prompt_string:
                 print("DEBUG: MockModel matched 'curse'")
                 mock_json_payload = {
                     "narrative": "Mock: You feel weaker after the Asura's curse and notice your favorite dagger is gone, but you find a healing herb.",
@@ -246,7 +294,7 @@ if __name__ == '__main__':
             return MockResponse(text=raw_response_with_fences)
 
     class MockPlayer:
-        def __init__(self, name, hp, max_hp, mp, max_mp, current_location, story_flags, inventory, skills=None):
+        def __init__(self, name, hp, max_hp, mp, max_mp, current_location, story_flags, inventory, skills=None, adventure_log=None):
             self.name = name
             self.hp = hp
             self.max_hp = max_hp
@@ -256,6 +304,7 @@ if __name__ == '__main__':
             self.story_flags = story_flags
             self.inventory = inventory
             self.skills = skills if skills is not None else ["Default Skill 1", "Default Skill 2"]
+            self.adventure_log = adventure_log if adventure_log is not None else AdventureLog() # Initialize log
     # --- End Mock classes ---
 
     try:
@@ -372,6 +421,47 @@ if __name__ == '__main__':
         print(f"  Inventory Add: {game_updates_malformed.inventory_add}")
         print(f"  Player Name: {game_updates_malformed.player_name}")
         print(f"  Skill Used: {game_updates_malformed.skill_used}") # Should be None
+
+        print("\n--- Testing get_scene_description_from_log ---")
+        player_with_log = MockPlayer(
+            name="LogHero", hp=80, max_hp=100, mp=30, max_mp=50,
+            current_location="Old Temple",
+            story_flags={"found_relic": True},
+            inventory=["torch", "map"],
+            skills=["Heal Self"],
+            adventure_log=AdventureLog(max_entries=5) # Use a smaller max for test
+        )
+        # Add some entries to the log
+        player_with_log.adventure_log.entries.append(AdventureLogEntry(type="player_action", content="Entered the dark cave", turn_number=1))
+        player_with_log.adventure_log.entries.append(AdventureLogEntry(type="ai_output", content="The cave is damp and silent. A faint glow ahead.", turn_number=1))
+        player_with_log.adventure_log.entries.append(AdventureLogEntry(type="player_action", content="Investigate the glow", turn_number=2))
+        player_with_log.adventure_log.entries.append(AdventureLogEntry(type="ai_output", content="You found a hidden inscription!", turn_number=2))
+
+        continuation_scene = dm.get_scene_description_from_log(player_with_log)
+        print("\n--- Continuation Scene from Log ---")
+        print(continuation_scene)
+
+        print("\n--- Testing get_scene_description_from_log (empty log) ---")
+        player_empty_log = MockPlayer(
+            name="FreshHero", hp=100, max_hp=100, mp=50, max_mp=50,
+            current_location="Starting Village",
+            story_flags={},
+            inventory=[],
+            adventure_log=AdventureLog() # Empty log
+        )
+        # Temporarily make MockModel return a specific string for initial scene to verify fallback
+        original_generate_content_initial = dm.model.generate_content
+        def mock_initial_scene_for_empty_log_test(prompt_string):
+            if "Describe the very first intriguing scene" in prompt_string:
+                 print("DEBUG: MockModel matched 'Describe the very first intriguing scene' for empty log test")
+                 return MockResponse(text="Mock: You stand at a crossroads, ready for a new adventure (empty log fallback).")
+            return original_generate_content_initial(prompt_string) # Call original mock for other prompts
+
+        dm.model.generate_content = mock_initial_scene_for_empty_log_test
+        initial_scene_for_empty_log = dm.get_scene_description_from_log(player_empty_log)
+        dm.model.generate_content = original_generate_content_initial # Restore
+        print("\n--- Initial Scene for Empty Log (Fallback Test) ---")
+        print(initial_scene_for_empty_log)
 
 
     except ValueError as e:

@@ -20,6 +20,15 @@ class GameStateUpdates(BaseModel):
         # without raising an error. They will be ignored.
         extra = 'ignore'
 
+class AdventureLogEntry(BaseModel):
+    type: str  # e.g., "player_action", "ai_output"
+    content: str
+    turn_number: int
+
+class AdventureLog(BaseModel):
+    entries: List[AdventureLogEntry] = Field(default_factory=list)
+    max_entries: int = 10
+
 if __name__ == '__main__':
     # Example usage and test
     updates_data_from_ai = {
