@@ -75,51 +75,40 @@ Key story events/flags known so far: {str(player_object.story_flags)}.
 
 The player says: "{player_action}"
 
-Your response MUST be a valid JSON object.
-The JSON object must have two top-level keys:
-1.  `"narrative"`: A string describing what happens next in 3-5 concise sentences. This narrative should be creative, maintain the Indian Mythology theme, and consider the player's current situation, inventory, and known story flags.
-2.  `"game_state_updates"`: A JSON object detailing any changes to the player's state or game world. If no change occurs for a particular aspect, omit the key or set its value to a default "no-change" state (e.g., 0 for hp_change, empty list for inventory_add/remove, null for new_location).
+Your response MUST be a valid JSON object with two top-level keys: "narrative" and "game_state_updates".
+1.  `"narrative"`: String (3-5 sentences) describing what happens next. Maintain theme and consider player's situation.
+2.  `"game_state_updates"`: JSON object for player/world changes. Omit keys or use default values if no change for an aspect.
+    Fields for `"game_state_updates"` (use defaults if no change):
+    -   `"inventory_add"`: list[str] - Items to add. Default: [].
+    -   `"inventory_remove"`: list[str] - Items to remove. Default: [].
+    -   `"hp_change"`: int - Player HP change. Default: 0.
+    -   `"mp_change"`: int - Player MP change. Default: 0.
+    -   `"new_story_flags"`: object - Story flags to set/update. Default: {{}}.
+    -   `"new_location"`: str | null - Player's new location. Default: null.
+    -   `"player_name"`: str | null - Player's new name. Default: null.
 
-The `"game_state_updates"` object can contain the following keys:
-    -   `"inventory_add"`: (list of strings) Items added to the player's inventory. Example: `["celestial sword", "healing potion"]`. Default: `[]`.
-    -   `"inventory_remove"`: (list of strings) Items removed from the player's inventory. Example: `["broken shield"]`. Default: `[]`.
-    -   `"hp_change"`: (integer) Change in player's HP (e.g., -10 for damage, 20 for healing). Default: `0`.
-    -   `"mp_change"`: (integer) Change in player's MP. Default: `0`.
-    -   `"new_story_flags"`: (object) New story flags to be set or updated. Example: `{{"met_sage": true, "artifact_found": false}}`. Default: `{{}}`.
-    -   `"new_location"`: (string or null) The new location of the player, if they moved. Example: `"The Enchanted Forest"`. Default: `null`.
-    -   `"player_name"`: (string or null) The new name for the player, if it changes. Example: `"Veer"`. Default: `null`.
-
-Example of a complete JSON response:
+Example 1 (Comprehensive update):
 ```json
 {{
-    "narrative": "You skillfully parry the Asura's attack with your dagger and find an opening. With a swift movement, you pick up a discarded healing potion from a fallen warrior.",
+    "narrative": "You feel weaker after the Asura's curse and notice your favorite dagger is gone, but you find a healing herb.",
     "game_state_updates": {{
-        "inventory_add": ["healing potion"],
-        "inventory_remove": [],
-        "hp_change": 0,
-        "mp_change": 0,
-        "new_story_flags": {{}},
-        "new_location": null,
-        "player_name": null
+        "inventory_add": ["healing herb"],
+        "inventory_remove": ["favorite dagger"],
+        "hp_change": -10,
+        "mp_change": -5,
+        "new_story_flags": {{"cursed": true}},
+        "player_name": "Weakened Player"
     }}
 }}
 ```
-
-Another example (if player takes damage and uses an item):
+Example 2 (Narrative only, no state changes):
 ```json
 {{
-    "narrative": "The Asura's blow lands, and you feel a searing pain. You quickly quaff your healing herb, and its magic soothes some of your wounds.",
-    "game_state_updates": {{
-        "inventory_add": [],
-        "inventory_remove": ["healing herb"],
-        "hp_change": -15,
-        "mp_change": 0,
-        "new_story_flags": {{}},
-        "new_location": null
-    }}
+    "narrative": "You look around but find nothing of interest, and nothing about you changes.",
+    "game_state_updates": {{}}
 }}
 ```
-Remember to only include keys in `game_state_updates` if their values actually change. Ensure your output is a single, valid JSON object.
+Ensure your output is a single, valid JSON object. Only include changed fields in `game_state_updates`.
 """
         response_text = ""
         try:
@@ -179,16 +168,29 @@ if __name__ == '__main__':
 
         def generate_content(self, prompt_string):
             print("(MockModel received prompt, returning mock JSON response)")
-            # Simulate a JSON response
-            mock_json_payload = {
-                "narrative": "This is a mock narrative from the AI.",
-                "game_state_updates": {
-                    "inventory_add": ["mock item"],
-                    "hp_change": -5,
-                    "new_story_flags": {"mock_flag_set": True},
-                    "player_name": "MockHeroName"  # Added player_name
+            # Simulate a JSON response based on the new concise prompt's examples
+            if "curse" in prompt_string: # Crude way to pick an example based on player action
+                mock_json_payload = {
+                    "narrative": "You feel weaker after the Asura's curse and notice your favorite dagger is gone, but you find a healing herb.",
+                    "game_state_updates": {
+                        "inventory_add": ["healing herb"],
+                        "inventory_remove": ["favorite dagger"],
+                        "hp_change": -10,
+                        "mp_change": -5,
+                        "new_story_flags": {"cursed": True},
+                        "player_name": "Weakened Player"
+                    }
                 }
-            }
+            else: # Default mock
+                mock_json_payload = {
+                    "narrative": "This is a mock narrative for other actions.",
+                    "game_state_updates": {
+                        "inventory_add": ["mock item"],
+                        "hp_change": -5,
+                        "new_story_flags": {"mock_flag_set": True},
+                        "player_name": "MockHeroName"
+                    }
+                }
             # Simulate AI wrapping the response in markdown ```json ... ```
             raw_response_with_fences = f"```json\n{json.dumps(mock_json_payload)}\n```"
             return MockResponse(text=raw_response_with_fences)
@@ -215,15 +217,15 @@ if __name__ == '__main__':
         print("\nInitial Scene (Assumed for test):")
         print(initial_scene)
 
-        print("\n--- Simulating Player Action ---")
-        player_input_action = "I examine the strange markings on the wall."
+        print("\n--- Simulating Player Action (expecting comprehensive update from mock) ---")
+        player_input_action = "I touch the cursed idol." # Action to trigger specific mock
         print(f"Player action: {player_input_action}")
 
         test_player = MockPlayer(
             name="TestHero", hp=90, max_hp=100, mp=40, max_mp=50,
             current_location=initial_scene.splitlines()[0],
             story_flags={"found_dagger": False, "met_sage": True},
-            inventory=["a rusty sword", "some dried rations", "a mysterious amulet"]
+            inventory=["a rusty sword", "some dried rations", "a mysterious amulet", "favorite dagger"]
         )
 
         narrative, game_updates = dm.get_ai_response(player_object=test_player, player_action=player_input_action)
@@ -238,13 +240,35 @@ if __name__ == '__main__':
         print(f"  MP Change: {game_updates.mp_change}")
         print(f"  New Story Flags: {game_updates.new_story_flags}")
         print(f"  New Location: {game_updates.new_location}")
-        print(f"  Player Name: {game_updates.player_name}") # Added print for player_name
+        print(f"  Player Name: {game_updates.player_name}")
+
+
+        print("\n--- Simulating Player Action (expecting minimal update from mock) ---")
+        player_input_action_minimal = "I look around."
+        print(f"Player action: {player_input_action_minimal}")
+
+        # Reconfigure MockModel for minimal response (Example 2 type)
+        dm.model.generate_content = lambda prompt_string: MockResponse(
+            text=f"```json\n{json.dumps({'narrative': 'You look around but find nothing of interest, and nothing about you changes.', 'game_state_updates': {}})}\n```"
+        )
+        narrative_minimal, game_updates_minimal = dm.get_ai_response(player_object=test_player, player_action=player_input_action_minimal)
+        print("\n--- Parsed AI Response (Minimal Update) ---")
+        print("Narrative:")
+        print(narrative_minimal)
+        print("\nGame State Updates (should be all defaults):")
+        print(f"  Inventory Add: {game_updates_minimal.inventory_add}")
+        print(f"  Inventory Remove: {game_updates_minimal.inventory_remove}")
+        print(f"  HP Change: {game_updates_minimal.hp_change}")
+        print(f"  MP Change: {game_updates_minimal.mp_change}")
+        print(f"  New Story Flags: {game_updates_minimal.new_story_flags}")
+        print(f"  New Location: {game_updates_minimal.new_location}")
+        print(f"  Player Name: {game_updates_minimal.player_name}")
+
 
         print("\n--- Simulating another player action (e.g., AI returns malformed JSON) ---")
         player_input_action_2 = "I try to decipher the ancient text."
         print(f"Player action: {player_input_action_2}")
 
-        # Reconfigure MockModel to return malformed JSON for the next call
         dm.model.generate_content = lambda prompt_string: MockResponse(text="This is not valid JSON {oops")
 
         narrative_2, game_updates_2 = dm.get_ai_response(player_object=test_player, player_action=player_input_action_2)
@@ -253,18 +277,18 @@ if __name__ == '__main__':
         print(narrative_2)
         print("\nGame State Updates (should be default/empty):")
         print(f"  Inventory Add: {game_updates_2.inventory_add}")
-        print(f"  Player Name: {game_updates_2.player_name}") # Added for consistency
+        print(f"  Player Name: {game_updates_2.player_name}")
 
         print("\n--- Simulating Player Action (JSON wrapped in ```) ---")
         player_input_action_3 = "Test with triple backticks"
         print(f"Player action: {player_input_action_3}")
 
-        mock_json_payload_for_test3 = {
+        mock_json_payload_for_test3 = { # Re-define for clarity as it's a distinct test
             "narrative": "Narrative for triple-backtick test.",
             "game_state_updates": {
                 "inventory_add": ["triple-backtick item"],
                 "mp_change": 10,
-                "player_name": "HeroStillMock" # Added player_name
+                "player_name": "HeroStillMock"
             }
         }
         dm.model.generate_content = lambda prompt_string: MockResponse(text=f"```\n{json.dumps(mock_json_payload_for_test3)}\n```")
@@ -280,7 +304,7 @@ if __name__ == '__main__':
         print(f"  MP Change: {game_updates_3.mp_change}")
         print(f"  New Story Flags: {game_updates_3.new_story_flags}")
         print(f"  New Location: {game_updates_3.new_location}")
-        print(f"  Player Name: {game_updates_3.player_name}") # Added print for player_name
+        print(f"  Player Name: {game_updates_3.player_name}")
 
     except ValueError as e:
         print(f"Error during example execution: {e}")
