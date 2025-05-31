@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RPG Adventure</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="leftPanel">
+            <div id="mapArea">
+                <h2>Map</h2>
+                <img id="gameMap" src="images/map.svg" alt="Game Map">
+            </div>
+            <div id="statsArea">
+                <h2>Stats</h2>
+                <p>HP: <span id="playerHP">--</span>/<span id="playerMaxHP">--</span></p>
+                <p>MP: <span id="playerMP">--</span>/<span id="playerMaxMP">--</span></p>
+                <p>Location: <span id="playerLocation">Unknown</span></p>
+            </div>
+            <div id="skillsArea">
+                <h2>Skills</h2>
+                <ul id="playerSkills">
+                    <li>Skill 1</li>
+                    <li>Skill 2</li>
+                </ul>
+            </div>
+            <div id="inventoryArea">
+                <h2>Inventory</h2>
+                <ul id="playerInventory">
+                    <li>Item 1</li>
+                    <li>Item 2</li>
+                </ul>
+            </div>
+        </div>
+        <div id="mainPanel">
+            <div id="narrativeArea">
+                <p>Welcome to your adventure!</p>
+                <!-- Narrative text will be appended here by JavaScript -->
+            </div>
+            <div id="inputArea">
+                <input type="text" id="commandInput" placeholder="Enter your command...">
+                <button onclick="sendCommand()">Send</button>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="/eel.js"></script>
+    <script type="text/javascript" src="script.js"></script>
+</body>
+</html>
