@@ -302,15 +302,20 @@ async function sendCommand() {
     console.log("JS DEBUG: sendCommand() function execution started.");
     const commandInput = document.getElementById('commandInput');
     const command = commandInput.value.trim();
+
     if (command) {
-        update_narrative(command, 'player_command'); // Display player's command
+        const commandToProcess = command; // Store it before clearing
+        commandInput.value = ''; // Clear input field EARLY
+        console.log("JS DEBUG: Input field cleared. Command to process: " + commandToProcess);
+
+        update_narrative(commandToProcess, 'player_command');
         try {
-            await eel.process_player_command_py(command)(); // Call Python
+            await eel.process_player_command_py(commandToProcess)();
         } catch (error) {
             console.error("JS: Error calling process_player_command_py:", error);
-            update_narrative("Error: Could not send command to Python. " + error);
+            // Using 'system' type for errors, or keep as default 'normal'
+            update_narrative("Error: Could not send command to Python. " + error, 'system');
         }
-        commandInput.value = ''; // Clear input field
     }
     console.log("JS DEBUG: sendCommand() function execution finished.");
 }
