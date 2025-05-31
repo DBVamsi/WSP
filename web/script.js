@@ -89,14 +89,27 @@ function update_narrative(text_line, type = 'normal') {
     }
 
     narrativeContainer.appendChild(wrapperDiv);
-    if (scrollContainer) { // Check if scrollContainer was found (should be same as narrativeContainer)
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+
+    // Updated scroll logic using requestAnimationFrame
+    if (scrollContainer) { // scrollContainer is narrativeArea
+        requestAnimationFrame(() => {
+            // It's sometimes useful to run it in the *next* frame after the next frame
+            // to ensure all layout calculations are done.
+            requestAnimationFrame(() => {
+                scrollContainer.scrollTop = scrollContainer.scrollHeight;
+                console.log(`JS: Scrolled narrativeArea. scrollTop: ${scrollContainer.scrollTop}, scrollHeight: ${scrollContainer.scrollHeight}`);
+            });
+        });
     }
 }
 
 eel.expose(update_player_stats);
-function update_player_stats(hp, max_hp, mp, max_mp, location) {
-    console.log(`JS: update_player_stats called with: HP=${hp}/${max_hp}, MP=${mp}/${max_mp}, Loc=${location}`);
+// New signature: added 'name' as the first parameter
+function update_player_stats(name, hp, max_hp, mp, max_mp, location) {
+    console.log(`JS: update_player_stats called with: Name=${name}, HP=${hp}/${max_hp}, MP=${mp}/${max_mp}, Loc=${location}`);
+
+    const playerNameDisplay = document.getElementById('playerNameValue'); // New element
+    console.log("JS: playerNameValue element:", playerNameDisplay);     // New log
 
     const hpDisplay = document.getElementById('playerHPDisplay');
     console.log("JS: playerHPDisplay element:", hpDisplay);
@@ -108,6 +121,10 @@ function update_player_stats(hp, max_hp, mp, max_mp, location) {
     console.log("JS: playerMPBar element:", mpBar);
     const locationDisplay = document.getElementById('playerLocationDisplay');
     console.log("JS: playerLocationDisplay element:", locationDisplay);
+
+    if (playerNameDisplay) { // New block to update name
+        playerNameDisplay.textContent = name;
+    }
 
     if (hpDisplay) {
         hpDisplay.textContent = `${hp}/${max_hp}`;

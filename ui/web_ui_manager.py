@@ -69,8 +69,10 @@ class WebUIManager:
         print(f"DEBUG WebUIManager: Received player data: Name='{name}', HP={hp}/{max_hp}, MP={mp}/{max_mp}, Loc='{location}', Inv={inventory}, Skills={skills}")
 
         # Log values just before sending to JS for stats
-        print(f"DEBUG WebUIManager: Calling eel.update_player_stats with: HP={hp}, MaxHP={max_hp}, MP={mp}, MaxMP={max_mp}, Loc='{location}'")
+        # Safely get name for logging and for the call, using the 'name' variable defined above which defaults to 'N/A'
+        print(f"DEBUG WebUIManager: Calling eel.update_player_stats with: Name='{name}', HP={hp}, MaxHP={max_hp}, MP={mp}, MaxMP={max_mp}, Loc='{location}'")
         eel.update_player_stats(
+            name, # New first argument
             hp, max_hp,
             mp, max_mp,
             location
