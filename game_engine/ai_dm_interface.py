@@ -87,6 +87,7 @@ The `"game_state_updates"` object can contain the following keys:
     -   `"mp_change"`: (integer) Change in player's MP. Default: `0`.
     -   `"new_story_flags"`: (object) New story flags to be set or updated. Example: `{{"met_sage": true, "artifact_found": false}}`. Default: `{{}}`.
     -   `"new_location"`: (string or null) The new location of the player, if they moved. Example: `"The Enchanted Forest"`. Default: `null`.
+    -   `"player_name"`: (string or null) The new name for the player, if it changes. Example: `"Veer"`. Default: `null`.
 
 Example of a complete JSON response:
 ```json
@@ -98,7 +99,8 @@ Example of a complete JSON response:
         "hp_change": 0,
         "mp_change": 0,
         "new_story_flags": {{}},
-        "new_location": null
+        "new_location": null,
+        "player_name": null
     }}
 }}
 ```
@@ -183,7 +185,8 @@ if __name__ == '__main__':
                 "game_state_updates": {
                     "inventory_add": ["mock item"],
                     "hp_change": -5,
-                    "new_story_flags": {"mock_flag_set": True}
+                    "new_story_flags": {"mock_flag_set": True},
+                    "player_name": "MockHeroName"  # Added player_name
                 }
             }
             # Simulate AI wrapping the response in markdown ```json ... ```
@@ -235,6 +238,7 @@ if __name__ == '__main__':
         print(f"  MP Change: {game_updates.mp_change}")
         print(f"  New Story Flags: {game_updates.new_story_flags}")
         print(f"  New Location: {game_updates.new_location}")
+        print(f"  Player Name: {game_updates.player_name}") # Added print for player_name
 
         print("\n--- Simulating another player action (e.g., AI returns malformed JSON) ---")
         player_input_action_2 = "I try to decipher the ancient text."
@@ -249,21 +253,18 @@ if __name__ == '__main__':
         print(narrative_2)
         print("\nGame State Updates (should be default/empty):")
         print(f"  Inventory Add: {game_updates_2.inventory_add}")
+        print(f"  Player Name: {game_updates_2.player_name}") # Added for consistency
 
         print("\n--- Simulating Player Action (JSON wrapped in ```) ---")
         player_input_action_3 = "Test with triple backticks"
         print(f"Player action: {player_input_action_3}")
 
-        # Reconfigure MockModel to return JSON wrapped only in ```
-        # mock_json_payload is defined above in the MockModel's original generate_content
-        # Need to ensure it's accessible here or redefine it. For simplicity, assume it's accessible
-        # or redefine it if this lambda is in a different scope where it's not.
-        # For this test, let's re-create it for clarity within this lambda's scope.
         mock_json_payload_for_test3 = {
             "narrative": "Narrative for triple-backtick test.",
             "game_state_updates": {
                 "inventory_add": ["triple-backtick item"],
-                "mp_change": 10
+                "mp_change": 10,
+                "player_name": "HeroStillMock" # Added player_name
             }
         }
         dm.model.generate_content = lambda prompt_string: MockResponse(text=f"```\n{json.dumps(mock_json_payload_for_test3)}\n```")
@@ -279,6 +280,7 @@ if __name__ == '__main__':
         print(f"  MP Change: {game_updates_3.mp_change}")
         print(f"  New Story Flags: {game_updates_3.new_story_flags}")
         print(f"  New Location: {game_updates_3.new_location}")
+        print(f"  Player Name: {game_updates_3.player_name}") # Added print for player_name
 
     except ValueError as e:
         print(f"Error during example execution: {e}")
