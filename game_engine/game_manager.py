@@ -85,9 +85,16 @@ class GameManager:
             self.ui.add_story_text(initial_description)
             print("GameManager: Initial scene processed.")
 
-            # Update player display after initial scene, before starting main UI loop
-            if self.player and hasattr(self.ui, 'update_player_display'): # Ensure player and method exist
+            # Update player display after initial scene
+            if self.player and hasattr(self.ui, 'update_player_display'):
                 self.ui.update_player_display(self.player)
+
+            # Display player's skills at the start of the game
+            if self.player and hasattr(self.player, 'skills') and self.player.skills:
+                self.ui.add_story_text(f"Your available skills: {', '.join(self.player.skills)}")
+            else:
+                self.ui.add_story_text("You currently have no special skills.")
+
 
             print("GameManager: Starting UI...")
             self.ui.start_ui()
@@ -102,82 +109,99 @@ class GameManager:
         Retrieves player input from the UI, processes it, and displays feedback.
         """
         command_string = self.ui.get_player_input()
-        stripped_command = command_string.strip() # Get a stripped version once
+        # We'll use stripped_command for the AI and UI message for now
+        stripped_command = command_string.strip()
 
-        if stripped_command: # Check if the stripped command is not empty
-            self.ui.add_story_text(f'You typed: {stripped_command}')
+        # Use the new parser
+        parsed_result = parse_input(command_string)
+        command = parsed_result['command']
+        arguments = parsed_result['arguments']
 
-            # Call parse_input (already imported)
-            parsed_command = parse_input(stripped_command)
+        if command is None:
+            self.ui.add_story_text("Please enter a command.")
+            return
 
-            # Placeholder for actual command processing logic
-            # For now, just acknowledge the parsed command (which is same as stripped_command)
-            # self.ui.add_story_text(f'Parsed as: {parsed_command}') # Optional debug line
+        # Display the original typed command (can be adjusted later if needed)
+        self.ui.add_story_text(f'You typed: {stripped_command}')
 
-            # Get AI response to the player's command
-            # Pass the player object and the parsed command to the AI DM
-            if hasattr(self, 'player') and self.player is not None:
-                narrative, game_updates = self.ai_dm.get_ai_response(player_object=self.player, player_action=parsed_command)
+        # Future game logic will use 'command' and 'arguments'.
+        # For example, a "use" command might check arguments:
+        # if command == "use" and arguments:
+        #     self.ui.add_story_text(f"You try to use {arguments[0]}.")
+        # elif command == "use":
+        #     self.ui.add_story_text("Use what?")
 
-                self.ui.add_story_text(narrative) # Display the narrative from AI
+        # Current interaction with AI_DM uses the full stripped_command.
+        # This can be revisited if AI needs more structured input.
+        player_action_for_ai = stripped_command
 
-                # Apply game state updates received from the AI
-                if game_updates: # game_updates will be an instance of GameStateUpdates
-                    # Apply inventory changes
-                    if game_updates.inventory_add:
-                        for item in game_updates.inventory_add:
-                            self.player.inventory.append(item)
-                            self.ui.add_story_text(f"[System: '{item}' added to inventory.]")
+        if hasattr(self, 'player') and self.player is not None:
+            # Pass the original stripped_command as player_action to the AI DM
+            # This is because the AI is currently tuned for full sentences.
+            # The parsed 'command' and 'arguments' will be used for client-side logic.
+            narrative, game_updates = self.ai_dm.get_ai_response(player_object=self.player, player_action=player_action_for_ai)
+            self.ui.add_story_text(narrative) # Display the narrative from AI
 
-                    if game_updates.inventory_remove:
-                        for item in game_updates.inventory_remove:
-                            if item in self.player.inventory:
-                                self.player.inventory.remove(item)
-                                self.ui.add_story_text(f"[System: '{item}' removed from inventory.]")
-                            else:
-                                self.ui.add_story_text(f"[System: Tried to remove '{item}', but it wasn't in inventory.]")
+            # Apply game state updates received from the AI
+            if game_updates: # game_updates will be an instance of GameStateUpdates
+                # Display skill usage first if a skill was used
+                if game_updates.skill_used:
+                    self.ui.add_story_text(f"[System: You used {game_updates.skill_used}!]")
 
-                    # Apply HP changes
-                    if game_updates.hp_change != 0:
-                        self.player.hp += game_updates.hp_change
-                        self.player.hp = max(0, min(self.player.hp, self.player.max_hp)) # Clamp HP
-                        self.ui.add_story_text(f"[System: HP changed by {game_updates.hp_change}. Current HP: {self.player.hp}/{self.player.max_hp}]")
+                # Apply inventory changes
+                if game_updates.inventory_add:
+                    for item in game_updates.inventory_add:
+                        self.player.inventory.append(item)
+                        self.ui.add_story_text(f"[System: '{item}' added to inventory.]")
 
-                    # Apply MP changes
-                    if game_updates.mp_change != 0:
-                        self.player.mp += game_updates.mp_change
-                        self.player.mp = max(0, min(self.player.mp, self.player.max_mp)) # Clamp MP
-                        self.ui.add_story_text(f"[System: MP changed by {game_updates.mp_change}. Current MP: {self.player.mp}/{self.player.max_mp}]")
+                if game_updates.inventory_remove:
+                    for item in game_updates.inventory_remove:
+                        if item in self.player.inventory:
+                            self.player.inventory.remove(item)
+                            self.ui.add_story_text(f"[System: '{item}' removed from inventory.]")
+                        else:
+                            self.ui.add_story_text(f"[System: Tried to remove '{item}', but it wasn't in inventory.]")
 
-                    # Apply story flag changes
-                    if game_updates.new_story_flags:
-                        self.player.story_flags.update(game_updates.new_story_flags)
-                        self.ui.add_story_text(f"[System: Story flags updated: {game_updates.new_story_flags}]")
+                # Apply HP changes (after skill message, if any)
+                if game_updates.hp_change != 0:
+                    self.player.hp += game_updates.hp_change
+                    self.player.hp = max(0, min(self.player.hp, self.player.max_hp)) # Clamp HP
+                    self.ui.add_story_text(f"[System: HP changed by {game_updates.hp_change}. Current HP: {self.player.hp}/{self.player.max_hp}]")
 
-                    # Apply location changes
-                    if game_updates.new_location and game_updates.new_location != self.player.current_location:
-                        self.player.current_location = game_updates.new_location
-                        self.ui.add_story_text(f"[System: Location changed to: {self.player.current_location}]")
+                # Apply MP changes
+                if game_updates.mp_change != 0:
+                    self.player.mp += game_updates.mp_change
+                    self.player.mp = max(0, min(self.player.mp, self.player.max_mp)) # Clamp MP
+                    self.ui.add_story_text(f"[System: MP changed by {game_updates.mp_change}. Current MP: {self.player.mp}/{self.player.max_mp}]")
 
-                    # Optional: Log the full state of the player after updates for debugging
-                    # print(f"Player state after updates: {self.player}")
+                # Apply story flag changes
+                if game_updates.new_story_flags:
+                    self.player.story_flags.update(game_updates.new_story_flags)
+                    self.ui.add_story_text(f"[System: Story flags updated: {game_updates.new_story_flags}]")
 
-                    # Apply player name change
-                    if game_updates.player_name and isinstance(game_updates.player_name, str) and game_updates.player_name.strip():
-                        if self.player.name != game_updates.player_name:
-                            old_name = self.player.name
-                            self.player.name = game_updates.player_name.strip()
-                            self.ui.add_story_text(f"[System: Player name changed from '{old_name}' to '{self.player.name}'.]")
+                # Apply location changes
+                if game_updates.new_location and game_updates.new_location != self.player.current_location:
+                    self.player.current_location = game_updates.new_location
+                    self.ui.add_story_text(f"[System: Location changed to: {self.player.current_location}]")
 
-                    # Refresh the UI display with the new player state
-                    if self.player and hasattr(self.ui, 'update_player_display'):
-                        self.ui.update_player_display(self.player)
-            else:
-                # This case should ideally not happen if player is always loaded/created in __init__
-                self.ui.add_story_text("Error: Player data is not available. Cannot process command.")
-        # else:
-            # Optionally, handle empty input, e.g., self.ui.add_story_text("Please enter a command.")
-            # For now, empty input is silently ignored as per the conditional check.
+                # Optional: Log the full state of the player after updates for debugging
+                # print(f"Player state after updates: {self.player}")
+
+                # Apply player name change
+                if game_updates.player_name and isinstance(game_updates.player_name, str) and game_updates.player_name.strip():
+                    if self.player.name != game_updates.player_name:
+                        old_name = self.player.name
+                        self.player.name = game_updates.player_name.strip()
+                        self.ui.add_story_text(f"[System: Player name changed from '{old_name}' to '{self.player.name}'.]")
+
+                # Refresh the UI display with the new player state
+                if self.player and hasattr(self.ui, 'update_player_display'):
+                    self.ui.update_player_display(self.player)
+        else: # This else clause pairs with "if hasattr(self, 'player') and self.player is not None:"
+            # This case should ideally not happen if player is always loaded/created in __init__
+            self.ui.add_story_text("Error: Player data is not available. Cannot process command.")
+        # The outer 'if command is None:' handles empty/whitespace input.
+        # No additional 'else' is needed here for that case.
 
     def quit_game(self):
         """
