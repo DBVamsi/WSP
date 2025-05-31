@@ -71,9 +71,17 @@ The player is {player_object.name}.
 Player's current status: HP: {player_object.hp}/{player_object.max_hp}, MP: {player_object.mp}/{player_object.max_mp}.
 Player's current location: {player_object.current_location}.
 Player's inventory: {str(player_object.inventory if hasattr(player_object, 'inventory') else [])}.
+Player's skills: {str(player_object.skills) if hasattr(player_object, 'skills') else 'None'}.
 Key story events/flags known so far: {str(player_object.story_flags)}.
 
 The player says: "{player_action}"
+
+Combat Instructions:
+- You can introduce hostile NPCs or creatures, initiating combat.
+- If combat occurs, describe the enemy, its actions, and the environment.
+- Player actions during combat could be 'attack [target]', 'use [skill name] [on target/on self]', 'defend', 'flee', etc.
+- When the player or an enemy takes damage, or an enemy is defeated, reflect this in the narrative and use `game_state_updates` (especially `hp_change` for the player) for mechanical effects.
+- You are responsible for tracking enemy health and status narratively.
 
 Your response MUST be a valid JSON object with two top-level keys: "narrative" and "game_state_updates".
 1.  `"narrative"`: String (3-5 sentences) describing what happens next. Maintain theme and consider player's situation.
@@ -86,26 +94,44 @@ Your response MUST be a valid JSON object with two top-level keys: "narrative" a
     -   `"new_story_flags"`: object - Story flags to set/update. Default: {{}}.
     -   `"new_location"`: str | null - Player's new location. Default: null.
     -   `"player_name"`: str | null - Player's new name. Default: null.
+    -   `"skill_used"`: str | null - The skill the player successfully used. Default: null.
 
-Example 1 (Comprehensive update):
+Example 1 (Comprehensive update with skill usage):
 ```json
 {{
-    "narrative": "You feel weaker after the Asura's curse and notice your favorite dagger is gone, but you find a healing herb.",
+    "narrative": "Focusing your will, you unleash a Power Attack against the charging Rakshasa! It stumbles back, wounded. You feel drained but victorious.",
     "game_state_updates": {{
-        "inventory_add": ["healing herb"],
-        "inventory_remove": ["favorite dagger"],
-        "hp_change": -10,
-        "mp_change": -5,
-        "new_story_flags": {{"cursed": true}},
-        "player_name": "Weakened Player"
+        "mp_change": -15,
+        "skill_used": "Power Attack",
+        "new_story_flags": {{"rakshasa_wounded": true}}
     }}
 }}
 ```
-Example 2 (Narrative only, no state changes):
+Example 2 (Simple item discovery, no skill):
+```json
+{{
+    "narrative": "You search the old chest and find a glowing gem inside.",
+    "game_state_updates": {{
+        "inventory_add": ["glowing gem"],
+        "new_story_flags": {{"found_gem": true}}
+    }}
+}}
+```
+Example 3 (Narrative only, no state changes):
 ```json
 {{
     "narrative": "You look around but find nothing of interest, and nothing about you changes.",
     "game_state_updates": {{}}
+}}
+```
+Example 4 (Combat scenario):
+Player action: "I attack the goblin with my sword."
+```json
+{{
+    "narrative": "You swing your sword at the goblin, landing a glancing blow. The goblin shrieks and lunges with its rusty dagger, catching your arm!",
+    "game_state_updates": {{
+        "hp_change": -5
+    }}
 }}
 ```
 Ensure your output is a single, valid JSON object. Only include changed fields in `game_state_updates`.
@@ -165,38 +191,62 @@ if __name__ == '__main__':
     class MockModel:
         def __init__(self, model_name='gemini-2.0-flash-lite'):
             self.model_name = model_name
+            self.last_prompt = "" # For debugging
 
         def generate_content(self, prompt_string):
-            print("(MockModel received prompt, returning mock JSON response)")
-            # Simulate a JSON response based on the new concise prompt's examples
-            if "curse" in prompt_string: # Crude way to pick an example based on player action
+            self.last_prompt = prompt_string
+            print(f"\n--- MockModel received prompt string for evaluation: ---\n{prompt_string}\n---------------------------------------------------\n")
+            print("(MockModel logic: evaluating which mock response to return based on prompt content...)")
+            if "Player's skills:" not in prompt_string: # This check is fine
+                print("WARNING: 'Player's skills:' not found in the prompt to MockModel (this might be ok for initial scene calls if any).")
+
+            # Simulate a JSON response based on player action
+            # Order of checks matters if prompts could contain multiple keywords.
+            if "curse" in prompt_string:
+                print("DEBUG: MockModel matched 'curse'")
                 mock_json_payload = {
-                    "narrative": "You feel weaker after the Asura's curse and notice your favorite dagger is gone, but you find a healing herb.",
+                    "narrative": "Mock: You feel weaker after the Asura's curse and notice your favorite dagger is gone, but you find a healing herb.",
                     "game_state_updates": {
                         "inventory_add": ["healing herb"],
                         "inventory_remove": ["favorite dagger"],
                         "hp_change": -10,
                         "mp_change": -5,
                         "new_story_flags": {"cursed": True},
-                        "player_name": "Weakened Player"
+                    }
+                }
+            elif "use Power Attack" in prompt_string:
+                print("DEBUG: MockModel matched 'use Power Attack'")
+                mock_json_payload = {
+                    "narrative": "Mock: You unleash a mighty Power Attack! The enemy is stunned.",
+                    "game_state_updates": {
+                        "mp_change": -10,
+                        "skill_used": "Power Attack",
+                        "new_story_flags": {"enemy_stunned": True}
+                    }
+                }
+            elif "attack the goblin" in prompt_string: # New mock for combat
+                print("DEBUG: MockModel matched 'attack the goblin'")
+                mock_json_payload = {
+                    "narrative": "Mock: You swing your sword at the goblin, landing a glancing blow. The goblin shrieks and lunges with its rusty dagger, catching your arm!",
+                    "game_state_updates": {
+                        "hp_change": -5
                     }
                 }
             else: # Default mock
+                print("DEBUG: MockModel matched default")
                 mock_json_payload = {
-                    "narrative": "This is a mock narrative for other actions.",
+                    "narrative": "Mock: This is a mock narrative for other actions (default).",
                     "game_state_updates": {
                         "inventory_add": ["mock item"],
-                        "hp_change": -5,
-                        "new_story_flags": {"mock_flag_set": True},
-                        "player_name": "MockHeroName"
+                        "hp_change": -5, # Default hp_change
+                        "new_story_flags": {"mock_flag_set_default": True}
                     }
                 }
-            # Simulate AI wrapping the response in markdown ```json ... ```
             raw_response_with_fences = f"```json\n{json.dumps(mock_json_payload)}\n```"
             return MockResponse(text=raw_response_with_fences)
 
     class MockPlayer:
-        def __init__(self, name, hp, max_hp, mp, max_mp, current_location, story_flags, inventory):
+        def __init__(self, name, hp, max_hp, mp, max_mp, current_location, story_flags, inventory, skills=None):
             self.name = name
             self.hp = hp
             self.max_hp = max_hp
@@ -205,6 +255,7 @@ if __name__ == '__main__':
             self.current_location = current_location
             self.story_flags = story_flags
             self.inventory = inventory
+            self.skills = skills if skills is not None else ["Default Skill 1", "Default Skill 2"]
     # --- End Mock classes ---
 
     try:
@@ -223,10 +274,14 @@ if __name__ == '__main__':
 
         test_player = MockPlayer(
             name="TestHero", hp=90, max_hp=100, mp=40, max_mp=50,
-            current_location=initial_scene.splitlines()[0],
+            current_location="Dimly Lit Antechamber", # Simplified for test
             story_flags={"found_dagger": False, "met_sage": True},
-            inventory=["a rusty sword", "some dried rations", "a mysterious amulet", "favorite dagger"]
+            inventory=["a rusty sword", "some dried rations", "a mysterious amulet", "favorite dagger"],
+            skills=["Power Attack", "Meditate", "Quick Dodge"]
         )
+        # Update dm.model.generate_content to use the specific instance of MockModel
+        mock_model_instance = MockModel()
+        dm.model = mock_model_instance # Assign the instance
 
         narrative, game_updates = dm.get_ai_response(player_object=test_player, player_action=player_input_action)
 
@@ -241,70 +296,83 @@ if __name__ == '__main__':
         print(f"  New Story Flags: {game_updates.new_story_flags}")
         print(f"  New Location: {game_updates.new_location}")
         print(f"  Player Name: {game_updates.player_name}")
+        print(f"  Skill Used: {game_updates.skill_used}") # Should be None for this case
+        if "Combat Instructions:" not in dm.model.last_prompt:
+             print("ERROR: Combat instructions missing in prompt for 'cursed idol' test!")
+
+
+        print("\n--- Simulating Player Action (Skill Usage) ---")
+        player_action_skill = "I use Power Attack on the guard!"
+        print(f"Player action: {player_action_skill}")
+
+        # The same mock_model_instance will be used, its behavior changes based on prompt content
+        narrative_skill, game_updates_skill = dm.get_ai_response(player_object=test_player, player_action=player_action_skill)
+
+        print("\n--- Parsed AI Response (Skill Usage) ---")
+        print("Narrative:")
+        print(narrative_skill)
+        print("\nGame State Updates:")
+        print(f"  MP Change: {game_updates_skill.mp_change}") # Should show -10 from mock
+        print(f"  Skill Used: {game_updates_skill.skill_used}") # Should now be 'Power Attack'
+        print(f"  New Story Flags: {game_updates_skill.new_story_flags}")
+        if "Combat Instructions:" not in dm.model.last_prompt:
+             print("ERROR: Combat instructions missing in prompt for 'Power Attack' test!")
+
+
+        print("\n--- Simulating Player Action (Combat) ---")
+        player_action_combat = "I attack the goblin with my sword."
+        print(f"Player action: {player_action_combat}")
+        narrative_combat, game_updates_combat = dm.get_ai_response(player_object=test_player, player_action=player_action_combat)
+
+        print("\n--- Parsed AI Response (Combat) ---")
+        print("Narrative:")
+        print(narrative_combat)
+        print("\nGame State Updates:")
+        print(f"  HP Change: {game_updates_combat.hp_change}") # Should be -5 from mock
+        print(f"  Skill Used: {game_updates_combat.skill_used}") # Should be None
+        if "Combat Instructions:" not in dm.model.last_prompt:
+             print("ERROR: Combat instructions missing in prompt for 'attack goblin' test!")
 
 
         print("\n--- Simulating Player Action (expecting minimal update from mock) ---")
         player_input_action_minimal = "I look around."
         print(f"Player action: {player_input_action_minimal}")
 
-        # Reconfigure MockModel for minimal response (Example 2 type)
+        # Temporarily override generate_content for this specific test case
+        original_generate_content = dm.model.generate_content
         dm.model.generate_content = lambda prompt_string: MockResponse(
-            text=f"```json\n{json.dumps({'narrative': 'You look around but find nothing of interest, and nothing about you changes.', 'game_state_updates': {}})}\n```"
+            text=f"```json\n{json.dumps({'narrative': 'Mock: You look around but find nothing of interest, and nothing about you changes.', 'game_state_updates': {}})}\n```"
         )
         narrative_minimal, game_updates_minimal = dm.get_ai_response(player_object=test_player, player_action=player_input_action_minimal)
+        dm.model.generate_content = original_generate_content # Restore original mock behavior
+
         print("\n--- Parsed AI Response (Minimal Update) ---")
         print("Narrative:")
         print(narrative_minimal)
         print("\nGame State Updates (should be all defaults):")
         print(f"  Inventory Add: {game_updates_minimal.inventory_add}")
-        print(f"  Inventory Remove: {game_updates_minimal.inventory_remove}")
-        print(f"  HP Change: {game_updates_minimal.hp_change}")
         print(f"  MP Change: {game_updates_minimal.mp_change}")
         print(f"  New Story Flags: {game_updates_minimal.new_story_flags}")
-        print(f"  New Location: {game_updates_minimal.new_location}")
-        print(f"  Player Name: {game_updates_minimal.player_name}")
+        print(f"  Skill Used: {game_updates_minimal.skill_used}") # Should be None
 
 
         print("\n--- Simulating another player action (e.g., AI returns malformed JSON) ---")
-        player_input_action_2 = "I try to decipher the ancient text."
-        print(f"Player action: {player_input_action_2}")
+        player_input_action_malformed = "I try to decipher the ancient text."
+        print(f"Player action: {player_input_action_malformed}")
 
+        original_generate_content_malformed = dm.model.generate_content
         dm.model.generate_content = lambda prompt_string: MockResponse(text="This is not valid JSON {oops")
+        narrative_malformed, game_updates_malformed = dm.get_ai_response(player_object=test_player, player_action=player_input_action_malformed)
+        dm.model.generate_content = original_generate_content_malformed # Restore
 
-        narrative_2, game_updates_2 = dm.get_ai_response(player_object=test_player, player_action=player_input_action_2)
         print("\n--- Parsed AI Response (Malformed JSON Test) ---")
         print("Narrative:")
-        print(narrative_2)
+        print(narrative_malformed)
         print("\nGame State Updates (should be default/empty):")
-        print(f"  Inventory Add: {game_updates_2.inventory_add}")
-        print(f"  Player Name: {game_updates_2.player_name}")
+        print(f"  Inventory Add: {game_updates_malformed.inventory_add}")
+        print(f"  Player Name: {game_updates_malformed.player_name}")
+        print(f"  Skill Used: {game_updates_malformed.skill_used}") # Should be None
 
-        print("\n--- Simulating Player Action (JSON wrapped in ```) ---")
-        player_input_action_3 = "Test with triple backticks"
-        print(f"Player action: {player_input_action_3}")
-
-        mock_json_payload_for_test3 = { # Re-define for clarity as it's a distinct test
-            "narrative": "Narrative for triple-backtick test.",
-            "game_state_updates": {
-                "inventory_add": ["triple-backtick item"],
-                "mp_change": 10,
-                "player_name": "HeroStillMock"
-            }
-        }
-        dm.model.generate_content = lambda prompt_string: MockResponse(text=f"```\n{json.dumps(mock_json_payload_for_test3)}\n```")
-
-        narrative_3, game_updates_3 = dm.get_ai_response(player_object=test_player, player_action=player_input_action_3)
-        print("\n--- Parsed AI Response (Triple Backticks Test) ---")
-        print("Narrative:")
-        print(narrative_3)
-        print("\nGame State Updates:")
-        print(f"  Inventory Add: {game_updates_3.inventory_add}")
-        print(f"  Inventory Remove: {game_updates_3.inventory_remove}")
-        print(f"  HP Change: {game_updates_3.hp_change}")
-        print(f"  MP Change: {game_updates_3.mp_change}")
-        print(f"  New Story Flags: {game_updates_3.new_story_flags}")
-        print(f"  New Location: {game_updates_3.new_location}")
-        print(f"  Player Name: {game_updates_3.player_name}")
 
     except ValueError as e:
         print(f"Error during example execution: {e}")

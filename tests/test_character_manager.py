@@ -50,16 +50,51 @@ class TestPlayer(unittest.TestCase):
         self.assertEqual(player.story_flags, {}, "story_flags is not an empty dict by default.")
         self.assertIsInstance(player.story_flags, dict, "story_flags is not a dictionary.")
 
+        # Test default inventory
+        self.assertEqual(player.inventory, [], "inventory is not an empty list by default.")
+        self.assertIsInstance(player.inventory, list, "inventory is not a list.")
+
+        # Test default skills
+        self.assertEqual(player.skills, ["Meditate", "Power Attack"],
+                         "skills do not match default values.")
+        self.assertIsInstance(player.skills, list, "skills is not a list.")
+
+    def test_player_creation_with_inventory_and_skills(self):
+        """Tests Player creation with specified inventory and skills."""
+        custom_inventory = ["healing potion", "mana potion"]
+        custom_skills = ["Heal", "Fireball"]
+        player = Player(player_id=3, name="Sorcerer", hp=70, max_hp=70, mp=100, max_mp=100,
+                        inventory=custom_inventory, skills=custom_skills)
+
+        self.assertEqual(player.inventory, custom_inventory, "Custom inventory not set correctly.")
+        self.assertEqual(player.skills, custom_skills, "Custom skills not set correctly.")
+
+    def test_player_creation_with_empty_skills(self):
+        """Tests Player creation with an explicitly empty list for skills."""
+        player = Player(player_id=4, name="Warrior", hp=120, max_hp=120, mp=30, max_mp=30, skills=[])
+        self.assertEqual(player.skills, [], "Skills should be an empty list when initialized as empty.")
 
     def test_player_representation(self):
         """
         Tests the __repr__ method of the Player class.
         """
-        player = Player(player_id=2, name="Mage", hp=60, max_hp=60, mp=120, max_mp=120)
-        # Expected representation now includes location and flags
+        player = Player(player_id=2, name="Mage", hp=60, max_hp=60, mp=120, max_mp=120,
+                        inventory=["staff", "robe"], skills=["Magic Missile", "Shield"])
         expected_repr = ("Player(player_id=2, name='Mage', hp=60/60, mp=120/120, "
-                         "location='Battlefield - Edge of the Kurukshetra', flags={})")
+                         "location='Battlefield - Edge of the Kurukshetra', flags={}, "
+                         "inventory=['staff', 'robe'], skills=['Magic Missile', 'Shield'])")
         self.assertEqual(repr(player), expected_repr, "__repr__ output is not as expected.")
+
+    def test_player_representation_defaults(self):
+        """
+        Tests the __repr__ method of the Player class with default inventory and skills.
+        """
+        player = Player(player_id=5, name="Rookie", hp=50, max_hp=50, mp=20, max_mp=20)
+        expected_repr = ("Player(player_id=5, name='Rookie', hp=50/50, mp=20/20, "
+                         "location='Battlefield - Edge of the Kurukshetra', flags={}, "
+                         "inventory=[], skills=['Meditate', 'Power Attack'])")
+        self.assertEqual(repr(player), expected_repr, "__repr__ output with default skills/inventory is not as expected.")
+
 
 if __name__ == '__main__':
     unittest.main()

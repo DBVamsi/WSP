@@ -1,8 +1,11 @@
+from typing import List, Optional
+
 class Player:
     """
     Represents a player character in the game.
     """
-    def __init__(self, player_id: int, name: str, hp: int, max_hp: int, mp: int, max_mp: int, inventory: list[str] = None):
+    def __init__(self, player_id: int, name: str, hp: int, max_hp: int, mp: int, max_mp: int,
+                 inventory: Optional[List[str]] = None, skills: Optional[List[str]] = None):
         """
         Initializes a new Player instance.
 
@@ -13,7 +16,10 @@ class Player:
             max_hp (int): The maximum hit points of the player.
             mp (int): The current mana points of the player.
             max_mp (int): The maximum mana points of the player.
-            inventory (list[str], optional): The player's starting inventory. Defaults to None.
+            inventory (Optional[List[str]], optional): The player's starting inventory.
+                                                     Defaults to an empty list.
+            skills (Optional[List[str]], optional): The player's skills.
+                                                  Defaults to ["Meditate", "Power Attack"].
         """
         self.player_id = player_id
         self.name = name
@@ -21,9 +27,10 @@ class Player:
         self.max_hp = max_hp
         self.mp = mp
         self.max_mp = max_mp
-        self.inventory: list[str] = inventory if inventory is not None else []
-        self.current_location: str = 'Battlefield - Edge of the Kurukshetra'
-        self.story_flags: dict = {}
+        self.inventory: List[str] = inventory if inventory is not None else []
+        self.skills: List[str] = skills if skills is not None else ["Meditate", "Power Attack"]
+        self.current_location: str = 'Battlefield - Edge of the Kurukshetra' # Default, can be overwritten by load
+        self.story_flags: dict = {} # Default, can be overwritten by load
 
     def __repr__(self):
         """
@@ -31,12 +38,23 @@ class Player:
         """
         return (f"Player(player_id={self.player_id}, name='{self.name}', "
                 f"hp={self.hp}/{self.max_hp}, mp={self.mp}/{self.max_mp}, "
-                f"location='{self.current_location}', flags={self.story_flags}, inventory={self.inventory})")
+                f"location='{self.current_location}', flags={self.story_flags}, "
+                f"inventory={self.inventory}, skills={self.skills})")
 
 if __name__ == '__main__':
     # Example usage:
-    player1 = Player(player_id=1, name="Aragorn", hp=100, max_hp=100, mp=50, max_mp=50)
+    # Player with default skills
+    player1 = Player(player_id=1, name="Aragorn", hp=100, max_hp=100, mp=50, max_mp=50, inventory=["Sword", "Shield"])
     print(player1)
 
-    player2 = Player(player_id=2, name="Gandalf", hp=70, max_hp=80, mp=150, max_mp=150)
+    # Player with custom skills
+    player2 = Player(player_id=2, name="Gandalf", hp=70, max_hp=80, mp=150, max_mp=150, skills=["Fireball", "Teleport"])
     print(player2)
+
+    # Player with default inventory and skills explicitly set to None (should use defaults)
+    player3 = Player(player_id=3, name="Legolas", hp=90, max_hp=90, mp=70, max_mp=70, inventory=None, skills=None)
+    print(player3)
+
+    # Player with empty list for skills
+    player4 = Player(player_id=4, name="Gimli", hp=120, max_hp=120, mp=30, max_mp=30, skills=[])
+    print(player4)
