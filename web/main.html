@@ -1,48 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>RPG Adventure</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mahabharata: The Fading Age - An AI RPG</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Prata&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Round" rel="stylesheet"/>
     <link rel="stylesheet" type="text/css" href="style.css">
 </head>
-<body>
-    <div id="gameContainer">
-        <div id="leftPanel">
-            <div id="mapArea">
-                <h2>Map</h2>
-                <img id="gameMap" src="images/map.svg" alt="Game Map">
+<body class="bg-neutral-900 text-neutral-200 flex flex-col min-h-screen selection:bg-red-500 selection:text-white">
+    <header class="py-4 px-6 shadow-lg bg-neutral-800/50 backdrop-blur-md sticky top-0 z-50">
+        <h1 class="text-3xl font-bold text-center font-prata text-red-400 tracking-wider">Mahabharata: The Fading Age</h1>
+    </header>
+
+    <main class="flex-grow container mx-auto p-4 flex flex-col md:flex-row gap-4">
+        <!-- Left Panel -->
+        <aside class="md:w-1/3 lg:w-1/4 space-y-4">
+            <!-- Map Area -->
+            <section id="mapArea" class="bg-neutral-800/70 p-4 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-3 font-prata text-red-300 border-b border-neutral-700 pb-2">Map</h2>
+                <div class="aspect-square bg-neutral-700/50 rounded overflow-hidden shadow-inner">
+                    <img id="gameMap" src="images/map.svg" alt="Game Map" class="w-full h-full object-cover">
+                </div>
+            </section>
+
+            <!-- Stats Area -->
+            <section id="statsArea" class="bg-neutral-800/70 p-4 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-3 font-prata text-red-300 border-b border-neutral-700 pb-2">Character</h2>
+                <div class="space-y-1 text-sm">
+                    <p>HP: <span id="playerHP" class="font-bold text-green-400">--</span>/<span id="playerMaxHP" class="font-bold text-green-300">--</span></p>
+                    <p>MP: <span id="playerMP" class="font-bold text-blue-400">--</span>/<span id="playerMaxMP" class="font-bold text-blue-300">--</span></p>
+                    <p>Location: <span id="playerLocation" class="font-semibold text-amber-300">Unknown</span></p>
+                </div>
+            </section>
+
+            <!-- Skills Area -->
+            <section id="skillsArea" class="bg-neutral-800/70 p-4 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-3 font-prata text-red-300 border-b border-neutral-700 pb-2">Divine Skills</h2>
+                <div id="playerSkillsContainer" class="space-y-2">
+                    <!-- Skills will be populated here by JavaScript -->
+                    <p class="text-lg text-gray-400 italic">No divine skills known.</p>
+                </div>
+            </section>
+
+            <!-- Inventory Area -->
+            <section id="inventoryArea" class="bg-neutral-800/70 p-4 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-3 font-prata text-red-300 border-b border-neutral-700 pb-2">Treasures</h2>
+                <div id="playerInventoryContainer" class="space-y-2">
+                    <!-- Inventory items will be populated here by JavaScript -->
+                    <p class="text-lg text-gray-400 italic">Your satchel is empty.</p>
+                </div>
+            </section>
+        </aside>
+
+        <!-- Main Panel (Narrative and Input) -->
+        <section class="md:w-2/3 lg:w-3/4 flex flex-col bg-neutral-800/70 p-1 rounded-lg shadow-md">
+            <div id="narrativeArea" class="flex-grow p-4 overflow-y-auto space-y-3 text-sm leading-relaxed">
+                <p class="italic text-neutral-400">The air grows heavy... your adventure is about to unfold.</p>
             </div>
-            <div id="statsArea">
-                <h2>Stats</h2>
-                <p>HP: <span id="playerHP">--</span>/<span id="playerMaxHP">--</span></p>
-                <p>MP: <span id="playerMP">--</span>/<span id="playerMaxMP">--</span></p>
-                <p>Location: <span id="playerLocation">Unknown</span></p>
+            <div id="inputArea" class="p-4 border-t border-neutral-700">
+                <div class="flex items-center bg-neutral-900 rounded-lg shadow-inner p-1">
+                    <input type="text" id="commandInput" placeholder="What will you do, warrior?" class="flex-grow bg-transparent border-none text-neutral-200 placeholder-neutral-500 focus:ring-0 py-2 px-3 text-sm">
+                    <button id="sendCommandButton" onclick="sendCommand()" class="ml-2 bg-red-600 hover:bg-red-500 text-white font-semibold py-2 px-4 rounded-md transition-colors duration-150 ease-in-out text-sm flex items-center">
+                        <span class="material-icons-outlined mr-1 text-base">send</span>
+                        Send
+                    </button>
+                </div>
             </div>
-            <div id="skillsArea">
-                <h2>Skills</h2>
-                <ul id="playerSkills">
-                    <li>Skill 1</li>
-                    <li>Skill 2</li>
-                </ul>
-            </div>
-            <div id="inventoryArea">
-                <h2>Inventory</h2>
-                <ul id="playerInventory">
-                    <li>Item 1</li>
-                    <li>Item 2</li>
-                </ul>
-            </div>
-        </div>
-        <div id="mainPanel">
-            <div id="narrativeArea">
-                <p>Welcome to your adventure!</p>
-                <!-- Narrative text will be appended here by JavaScript -->
-            </div>
-            <div id="inputArea">
-                <input type="text" id="commandInput" placeholder="Enter your command...">
-                <button onclick="sendCommand()">Send</button>
-            </div>
-        </div>
-    </div>
+        </section>
+    </main>
+
+    <footer class="text-center py-4 text-xs text-neutral-500">
+        <p>&copy; 2024 AI RPG Project. An epic unfolds.</p>
+    </footer>
+
     <script type="text/javascript" src="/eel.js"></script>
     <script type="text/javascript" src="script.js"></script>
 </body>
