@@ -63,6 +63,10 @@ class GameManager:
             if hasattr(self.player, 'inventory'):
                 print(f"GameManager: Player '{self.player.name}' inventory: {self.player.inventory}")
 
+        # Update the UI with the loaded/created player's details
+        if self.player and hasattr(self.ui, 'update_player_display'): # Ensure player and method exist
+            self.ui.update_player_display(self.player)
+
 
         print("GameManager: Initializing AI Dungeon Master...")
         api_key_from_input = input('Please enter your Google AI API Key: ')
@@ -80,6 +84,10 @@ class GameManager:
             print("GameManager: Initial scene received. Displaying...")
             self.ui.add_story_text(initial_description)
             print("GameManager: Initial scene processed.")
+
+            # Update player display after initial scene, before starting main UI loop
+            if self.player and hasattr(self.ui, 'update_player_display'): # Ensure player and method exist
+                self.ui.update_player_display(self.player)
 
             print("GameManager: Starting UI...")
             self.ui.start_ui()
@@ -153,6 +161,10 @@ class GameManager:
 
                     # Optional: Log the full state of the player after updates for debugging
                     # print(f"Player state after updates: {self.player}")
+
+                    # Refresh the UI display with the new player state
+                    if self.player and hasattr(self.ui, 'update_player_display'):
+                        self.ui.update_player_display(self.player)
             else:
                 # This case should ideally not happen if player is always loaded/created in __init__
                 self.ui.add_story_text("Error: Player data is not available. Cannot process command.")

@@ -1,5 +1,9 @@
 import tkinter as tk
 from tkinter import ttk # For themed widgets, if needed later
+# It's good practice to import specific classes if you know them,
+# but for now, tk.* is used.
+# from tkinter import Label, Frame, Text, Entry, Button, Scrollbar, PanedWindow, Menu, messagebox, simpledialog
+from game_engine.character_manager import Player # For type hinting (anticipated)
 
 class GameUI:
     """
@@ -34,9 +38,18 @@ class GameUI:
         self.story_frame.pack(expand=True, fill=tk.BOTH)
         # self.story_frame.pack_propagate(False) # Optional: if you want to control its size strictly
 
-        # Temporary labels for each frame
-        self.stats_label = tk.Label(self.stats_frame, text='Stats Go Here', bg='grey')
-        self.stats_label.pack(padx=10, pady=10)
+        # Stats display labels (replacing the temporary one)
+        self.name_label = tk.Label(self.stats_frame, text="Name: ", background='grey', anchor='w')
+        self.name_label.pack(anchor='w', fill='x', padx=5, pady=2)
+
+        self.hp_label = tk.Label(self.stats_frame, text="HP: /", background='grey', anchor='w')
+        self.hp_label.pack(anchor='w', fill='x', padx=5, pady=2)
+
+        self.mp_label = tk.Label(self.stats_frame, text="MP: /", background='grey', anchor='w')
+        self.mp_label.pack(anchor='w', fill='x', padx=5, pady=2)
+
+        self.location_label = tk.Label(self.stats_frame, text="Location: ", background='grey', anchor='w', wraplength=180) # Wraplength based on frame width
+        self.location_label.pack(anchor='w', fill='x', padx=5, pady=2)
 
         # Replace story_label with a Text widget for scrollable story text
         # self.story_label = tk.Label(self.story_frame, text='Story Goes Here', fg='white', bg='black')
@@ -97,6 +110,31 @@ class GameUI:
         player_input = self.input_entry.get()
         self.input_entry.delete(0, tk.END)
         return player_input
+
+    def update_player_display(self, player_object: Player):
+        """
+        Updates the player statistics display panel with the given player_object's data.
+        """
+        if not hasattr(self, 'name_label') or \
+           not hasattr(self, 'hp_label') or \
+           not hasattr(self, 'mp_label') or \
+           not hasattr(self, 'location_label'):
+            # Labels might not exist if UI setup failed or called too early.
+            print("UI Warning: Player display labels not initialized yet.")
+            return
+
+        try:
+            self.name_label.config(text=f"Name: {player_object.name}")
+            self.hp_label.config(text=f"HP: {player_object.hp}/{player_object.max_hp}")
+            self.mp_label.config(text=f"MP: {player_object.mp}/{player_object.max_mp}")
+            self.location_label.config(text=f"Location: {player_object.current_location}")
+        except Exception as e:
+            print(f"Error updating player display: {e}")
+            # Optionally, update labels to show an error state or partial info
+            if hasattr(self, 'name_label'): self.name_label.config(text="Name: Error")
+            if hasattr(self, 'hp_label'): self.hp_label.config(text="HP: Error")
+            if hasattr(self, 'mp_label'): self.mp_label.config(text="MP: Error")
+            if hasattr(self, 'location_label'): self.location_label.config(text="Location: Error")
 
     def start_ui(self):
         """
