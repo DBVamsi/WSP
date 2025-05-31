@@ -95,9 +95,13 @@ class GameManager:
 
         initial_description = self.ai_dm.get_initial_scene_description()
         self.ui.add_story_text(initial_description)
+
+        # Debug print before initial player display update
+        if self.player:
+            print(f"DEBUG GameManager (init_ui): Player state before initial display: HP={self.player.hp}/{self.player.max_hp}, MP={self.player.mp}/{self.player.max_mp}, Loc='{self.player.current_location}', Inv={self.player.inventory}, Skills={self.player.skills}")
         self.ui.update_player_display(self.player)
 
-        if self.player.skills:
+        if self.player.skills: # player should exist here due to checks above
             self.ui.add_story_text(f"Your available skills: {', '.join(self.player.skills)}")
         else:
             self.ui.add_story_text("You currently have no special skills.")
@@ -178,6 +182,10 @@ class GameManager:
                     old_name = self.player.name
                     self.player.name = game_updates.player_name.strip()
                     self.ui.add_story_text(f"[System: Player name changed from '{old_name}' to '{self.player.name}'.]")
+
+            # Debug print before player display update in command processing
+            if self.player:
+                print(f"DEBUG GameManager (cmd_proc): Player state before update_player_display: HP={self.player.hp}/{self.player.max_hp}, MP={self.player.mp}/{self.player.max_mp}, Loc='{self.player.current_location}', Inv={self.player.inventory}, Skills={self.player.skills}")
 
             # Refresh the entire player display panel after all changes
             self.ui.update_player_display(self.player)

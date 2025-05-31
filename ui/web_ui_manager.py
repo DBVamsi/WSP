@@ -45,18 +45,49 @@ class WebUIManager:
 
 
     def update_player_display(self, player): # player is a Player object
-        if self.is_ready and player:
-            eel.update_player_stats(
-                player.hp, player.max_hp,
-                player.mp, player.max_mp,
-                player.current_location
-            )
-            eel.update_inventory(player.inventory if hasattr(player, 'inventory') else [])
-            eel.update_skills(player.skills if hasattr(player, 'skills') else [])
-        elif not self.is_ready:
-            print(f"WebUIManager: JS not ready. Player display update skipped for {player.name if player else 'Unknown Player'}.")
-        elif not player:
-            print(f"WebUIManager: No player object provided. Player display update skipped.")
+        if not self.is_ready or not player:
+            player_name_for_log = "N/A"
+            if player and hasattr(player, 'name'): # Check if player object exists and has name
+                player_name_for_log = player.name
+            elif player: # Player object exists but no name attribute
+                player_name_for_log = "Unknown Player (no name attr)"
+
+            print(f"DEBUG WebUIManager: JS not ready or no player. Player display update skipped. is_ready={self.is_ready}, player_exists={player is not None} (Name: {player_name_for_log})")
+            return
+
+        print(f"DEBUG WebUIManager: update_player_display called. Player type: {type(player)}")
+        # Ensure all attributes are accessed safely, providing defaults if necessary
+        hp = getattr(player, 'hp', 'N/A')
+        max_hp = getattr(player, 'max_hp', 'N/A')
+        mp = getattr(player, 'mp', 'N/A')
+        max_mp = getattr(player, 'max_mp', 'N/A')
+        location = getattr(player, 'current_location', 'N/A')
+        inventory = getattr(player, 'inventory', []) # Default to empty list for logging
+        skills = getattr(player, 'skills', [])       # Default to empty list for logging
+        name = getattr(player, 'name', 'N/A')
+
+        print(f"DEBUG WebUIManager: Received player data: Name='{name}', HP={hp}/{max_hp}, MP={mp}/{max_mp}, Loc='{location}', Inv={inventory}, Skills={skills}")
+
+        # Log values just before sending to JS for stats
+        print(f"DEBUG WebUIManager: Calling eel.update_player_stats with: HP={hp}, MaxHP={max_hp}, MP={mp}, MaxMP={max_mp}, Loc='{location}'")
+        eel.update_player_stats(
+            hp, max_hp,
+            mp, max_mp,
+            location
+        )
+
+        # Log values for inventory
+        inventory_to_send = getattr(player, 'inventory', []) # Ensure it's always a list for eel
+        print(f"DEBUG WebUIManager: Calling eel.update_inventory with: {inventory_to_send}")
+        eel.update_inventory(inventory_to_send)
+
+        # Log values for skills
+        skills_to_send = getattr(player, 'skills', []) # Ensure it's always a list for eel
+        print(f"DEBUG WebUIManager: Calling eel.update_skills with: {skills_to_send}")
+        eel.update_skills(skills_to_send)
+
+        print("DEBUG WebUIManager: update_player_display finished all eel calls.")
+
 
     def get_player_input(self) -> str:
         # This method is effectively obsolete in the Eel architecture as input comes from JS.
