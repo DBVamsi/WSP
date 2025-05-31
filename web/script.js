@@ -6,54 +6,229 @@ const mapRegions = [
 
 // --- Functions to update UI from Python ---
 eel.expose(update_narrative);
-function update_narrative(text_line) {
-    const narrativeArea = document.getElementById('narrativeArea');
-    const newLine = document.createElement('p');
-    newLine.textContent = text_line;
-    narrativeArea.appendChild(newLine);
-    narrativeArea.scrollTop = narrativeArea.scrollHeight; // Auto-scroll
+function update_narrative(text_line, type = 'normal') {
+    // Use "narrativeArea" as both the append target and the scroll container,
+    // as per current HTML structure where narrativeArea has overflow-y: auto.
+    const narrativeContainer = document.getElementById('narrativeArea');
+    const scrollContainer = document.getElementById('narrativeArea'); // Target for scrolling
+
+    if (!narrativeContainer) { // Only need to check one if they are the same
+        console.error("Narrative container #narrativeArea not found!");
+        return;
+    }
+
+    // Remove initial placeholder if it's still there
+    const placeholder = narrativeContainer.querySelector('p.italic.text-neutral-400');
+    if (placeholder && placeholder.textContent.includes("The air grows heavy")) {
+        placeholder.remove();
+    }
+
+    const wrapperDiv = document.createElement('div');
+    wrapperDiv.className = 'mb-4'; // Common margin for all entries
+
+    // Sanitize text_line to prevent HTML injection if it's ever sourced from user input directly
+    // For now, assuming text_line from Python is safe or simple text.
+    // A more robust sanitizer might be needed for arbitrary HTML content.
+    const escapeHtml = (unsafe) => {
+        if (typeof unsafe !== 'string') {
+            console.warn("escapeHtml received non-string input:", unsafe);
+            return ''; // Or handle as appropriate
+        }
+        return unsafe
+             .replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#039;");
+    };
+
+    let sanitizedText = escapeHtml(text_line);
+
+    switch (type) {
+        case 'player_command':
+            wrapperDiv.innerHTML = `
+                <p class="text-sky-400 font-semibold text-xl flex items-center">
+                    <span class="material-icons-round mr-2 text-2xl">person_pin</span>
+                    &gt; ${sanitizedText}
+                </p>`;
+            break;
+        case 'command_response':
+            // For multi-line, split by the literal '\n' passed from Python
+            const responseLines = sanitizedText.split('\\n');
+            let responseHtml = '';
+            responseLines.forEach(line => {
+                 responseHtml += `<p class="text-gray-200 text-lg leading-relaxed md:pl-8 mb-2">${line}</p>`; // Added md:pl-8 for larger screens
+            });
+            if (responseLines.length > 0 && responseHtml.endsWith('mb-2">')) { // Avoid empty last paragraph if ends with \n
+                 responseHtml = responseHtml.slice(0, -7) + '">';
+            }
+            wrapperDiv.innerHTML = responseHtml;
+            break;
+        case 'system':
+            wrapperDiv.innerHTML = `
+                <p class="text-teal-400 italic text-md flex items-center">
+                    <span class="material-icons-round mr-2 text-teal-500">settings_suggest</span>
+                    ${sanitizedText}
+                </p>`;
+            break;
+        case 'important':
+            wrapperDiv.innerHTML = `<p class="text-amber-300 font-semibold text-lg">${sanitizedText}</p>`;
+            break;
+        case 'normal':
+        default:
+            const normalLines = sanitizedText.split('\\n');
+            let normalHtml = '';
+            normalLines.forEach(line => {
+                 normalHtml += `<p class="text-gray-200 text-lg leading-relaxed mb-2">${line}</p>`;
+            });
+             if (normalLines.length > 0 && normalHtml.endsWith('mb-2">')) {
+                 normalHtml = normalHtml.slice(0, -7) + '">';
+            }
+            wrapperDiv.innerHTML = normalHtml;
+            break;
+    }
+
+    narrativeContainer.appendChild(wrapperDiv);
+    if (scrollContainer) { // Check if scrollContainer was found (should be same as narrativeContainer)
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    }
 }
 
 eel.expose(update_player_stats);
 function update_player_stats(hp, max_hp, mp, max_mp, location) {
-    document.getElementById('playerHP').textContent = hp;
-    document.getElementById('playerMaxHP').textContent = max_hp;
-    document.getElementById('playerMP').textContent = mp;
-    document.getElementById('playerMaxMP').textContent = max_mp;
-    document.getElementById('playerLocation').textContent = location;
-}
+    const hpDisplay = document.getElementById('playerHPDisplay');
+    const hpBar = document.getElementById('playerHPBar');
+    const mpDisplay = document.getElementById('playerMPDisplay');
+    const mpBar = document.getElementById('playerMPBar');
+    const locationDisplay = document.getElementById('playerLocationDisplay');
 
-eel.expose(update_inventory);
-function update_inventory(inventory_list) {
-    const inventoryList = document.getElementById('playerInventory');
-    inventoryList.innerHTML = ''; // Clear old items
-    if (inventory_list && inventory_list.length > 0) {
-        inventory_list.forEach(item => {
-            const listItem = document.createElement('li');
-            listItem.textContent = item;
-            inventoryList.appendChild(listItem);
-        });
-    } else {
-        const listItem = document.createElement('li');
-        listItem.textContent = 'Empty';
-        inventoryList.appendChild(listItem);
+    if (hpDisplay) {
+        hpDisplay.textContent = `${hp}/${max_hp}`;
+    }
+    if (hpBar) {
+        const hpPercentage = max_hp > 0 ? (hp / max_hp) * 100 : 0;
+        hpBar.style.width = `${hpPercentage}%`;
+        // Optional: Change bar color based on HP percentage
+        if (hpPercentage < 25) {
+            hpBar.classList.remove('bg-yellow-500', 'bg-green-500');
+            hpBar.classList.add('bg-red-500');
+        } else if (hpPercentage < 60) {
+            hpBar.classList.remove('bg-red-500', 'bg-green-500');
+            hpBar.classList.add('bg-yellow-500');
+        } else {
+            hpBar.classList.remove('bg-red-500', 'bg-yellow-500');
+            hpBar.classList.add('bg-green-500');
+        }
+    }
+
+    if (mpDisplay) {
+        mpDisplay.textContent = `${mp}/${max_mp}`;
+    }
+    if (mpBar) {
+        const mpPercentage = max_mp > 0 ? (mp / max_mp) * 100 : 0;
+        mpBar.style.width = `${mpPercentage}%`;
+        // MP bar is typically blue, can keep it simple or add class if needed
+        // mpBar.classList.add('bg-blue-500'); // Ensure it has its base color if not set in HTML
+    }
+
+    if (locationDisplay) {
+        locationDisplay.textContent = location;
     }
 }
 
-eel.expose(update_skills);
-function update_skills(skills_list) {
-    const skillsList = document.getElementById('playerSkills');
-    skillsList.innerHTML = ''; // Clear old skills
-    if (skills_list && skills_list.length > 0) {
-        skills_list.forEach(skill => {
-            const listItem = document.createElement('li');
-            listItem.textContent = skill;
-            skillsList.appendChild(listItem);
+const itemDisplayDetails = {
+    "Celestial Blade Fragment": { icon: "gpp_good", iconColorClass: "text-yellow-400", textClass: "text-yellow-300 font-semibold" }, // Adjusted textClass
+    "Simple Dagger": { icon: "hardware", iconColorClass: "text-gray-400", textClass: "text-gray-300" }, // Changed icon from shield
+    "healing herb": { icon: "healing", iconColorClass: "text-green-400", textClass: "text-green-300" }, // Adjusted textClass
+    "Mana Potion": { icon: "science", iconColorClass: "text-blue-400", textClass: "text-blue-300" },
+    "Key": { icon: "vpn_key", iconColorClass: "text-amber-400", textClass: "text-amber-300" }
+    // Add more known items
+};
+const defaultItemDetail = { icon: "inventory_2", iconColorClass: "text-gray-500", textClass: "text-gray-400" }; // Adjusted default colors
+
+eel.expose(update_inventory);
+function update_inventory(inventory_list) {
+    const inventoryContainer = document.getElementById('playerInventoryContainer');
+    if (!inventoryContainer) {
+        console.error("Inventory container #playerInventoryContainer not found!");
+        return;
+    }
+
+    inventoryContainer.innerHTML = ''; // Clear old items
+
+    if (inventory_list && inventory_list.length > 0) {
+        inventory_list.forEach(itemName => {
+            const details = itemDisplayDetails[itemName] || { ...defaultItemDetail, displayName: itemName };
+
+            const p = document.createElement('p');
+            // Base classes from problem description + specific text class
+            p.className = `text-lg ${details.textClass} hover:text-amber-300 hover:font-semibold cursor-pointer transition-all duration-200 flex items-center`;
+             // TODO: Add onclick handler for items if they become clickable:
+            // p.onclick = () => handleItemClick(itemName);
+
+            const iconSpan = document.createElement('span');
+            iconSpan.className = `material-icons-round mr-2 ${details.iconColorClass}`;
+            iconSpan.textContent = details.icon;
+
+            p.appendChild(iconSpan);
+            p.appendChild(document.createTextNode(" " + itemName)); // Using raw itemName, add space
+            inventoryContainer.appendChild(p);
         });
     } else {
-        const listItem = document.createElement('li');
-        listItem.textContent = 'No skills';
-        skillsList.appendChild(listItem);
+        const p = document.createElement('p');
+        p.className = 'text-lg text-gray-400 italic'; // Consistent empty message style
+        p.textContent = 'Your satchel is empty.';
+        inventoryContainer.appendChild(p);
+    }
+}
+
+const skillDisplayDetails = {
+    "Meditate": { displayName: "Dhyana (Meditate)", icon: "self_improvement", colorClass: "text-sky-400" },
+    "Power Attack": { displayName: "Vajra Strike (Power Attack)", icon: "bolt", colorClass: "text-red-500" }
+    // Add other known skills here
+};
+const defaultSkillDetail = { displayName: "Unknown Skill", icon: "star", colorClass: "text-gray-400" };
+
+eel.expose(update_skills);
+function update_skills(skills_list) {
+    const skillsContainer = document.getElementById('playerSkillsContainer'); // Ensure this ID exists in main.html
+    if (!skillsContainer) {
+        console.error("Skill container #playerSkillsContainer not found!");
+        return;
+    }
+
+    skillsContainer.innerHTML = ''; // Clear old skills
+
+    if (skills_list && skills_list.length > 0) {
+        skills_list.forEach(skillName => {
+            // Attempt to find specific details, fallback to skillName itself or default for unknown structure
+            let details;
+            if (typeof skillName === 'string') { // Assuming skills_list is an array of strings
+                details = skillDisplayDetails[skillName] || { ...defaultSkillDetail, displayName: skillName };
+            } else { // Fallback if skillName is not a string as expected (e.g. an object)
+                console.warn("Skill item is not a string, using default display:", skillName);
+                details = { ...defaultSkillDetail, displayName: "Invalid Skill Data" };
+            }
+
+
+            const p = document.createElement('p');
+            p.className = 'text-lg text-gray-300 hover:text-amber-300 hover:font-semibold cursor-pointer transition-all duration-200 flex items-center';
+            // TODO: Add onclick handler for skills if they become clickable:
+            // p.onclick = () => handleSkillClick(skillName);
+
+            const iconSpan = document.createElement('span');
+            iconSpan.className = `material-icons-round mr-2 ${details.colorClass}`;
+            iconSpan.textContent = details.icon;
+
+            p.appendChild(iconSpan);
+            p.appendChild(document.createTextNode(" " + details.displayName)); // Added a space for better separation
+            skillsContainer.appendChild(p);
+        });
+    } else {
+        const p = document.createElement('p');
+        p.className = 'text-lg text-gray-400 italic'; // Consistent with the placeholder in HTML
+        p.textContent = 'No divine skills known.';
+        skillsContainer.appendChild(p);
     }
 }
 
@@ -102,6 +277,7 @@ async function sendCommand() {
     const commandInput = document.getElementById('commandInput');
     const command = commandInput.value.trim();
     if (command) {
+        update_narrative(command, 'player_command'); // Display player's command
         try {
             await eel.process_player_command_py(command)(); // Call Python
         } catch (error) {
@@ -121,6 +297,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 sendCommand();
             }
         });
+    }
+
+    const sendCmdButton = document.getElementById('sendCommandButton');
+    if (sendCmdButton) {
+        sendCmdButton.addEventListener('click', sendCommand);
     }
 
     const gameMapElement = document.getElementById('gameMap');
