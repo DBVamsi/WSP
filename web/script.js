@@ -96,27 +96,34 @@ function update_narrative(text_line, type = 'normal') {
 
 eel.expose(update_player_stats);
 function update_player_stats(hp, max_hp, mp, max_mp, location) {
+    console.log(`JS: update_player_stats called with: HP=${hp}/${max_hp}, MP=${mp}/${max_mp}, Loc=${location}`);
+
     const hpDisplay = document.getElementById('playerHPDisplay');
+    console.log("JS: playerHPDisplay element:", hpDisplay);
     const hpBar = document.getElementById('playerHPBar');
+    console.log("JS: playerHPBar element:", hpBar);
     const mpDisplay = document.getElementById('playerMPDisplay');
+    console.log("JS: playerMPDisplay element:", mpDisplay);
     const mpBar = document.getElementById('playerMPBar');
+    console.log("JS: playerMPBar element:", mpBar);
     const locationDisplay = document.getElementById('playerLocationDisplay');
+    console.log("JS: playerLocationDisplay element:", locationDisplay);
 
     if (hpDisplay) {
         hpDisplay.textContent = `${hp}/${max_hp}`;
     }
     if (hpBar) {
         const hpPercentage = max_hp > 0 ? (hp / max_hp) * 100 : 0;
+        console.log("JS: Calculated HP Percentage:", hpPercentage);
         hpBar.style.width = `${hpPercentage}%`;
-        // Optional: Change bar color based on HP percentage
+
+        // HP Bar Coloring Logic (ensure it's still there)
+        hpBar.classList.remove('bg-red-500', 'bg-yellow-500', 'bg-green-500'); // Clear existing color classes
         if (hpPercentage < 25) {
-            hpBar.classList.remove('bg-yellow-500', 'bg-green-500');
             hpBar.classList.add('bg-red-500');
         } else if (hpPercentage < 60) {
-            hpBar.classList.remove('bg-red-500', 'bg-green-500');
             hpBar.classList.add('bg-yellow-500');
         } else {
-            hpBar.classList.remove('bg-red-500', 'bg-yellow-500');
             hpBar.classList.add('bg-green-500');
         }
     }
@@ -126,14 +133,15 @@ function update_player_stats(hp, max_hp, mp, max_mp, location) {
     }
     if (mpBar) {
         const mpPercentage = max_mp > 0 ? (mp / max_mp) * 100 : 0;
+        console.log("JS: Calculated MP Percentage:", mpPercentage);
         mpBar.style.width = `${mpPercentage}%`;
-        // MP bar is typically blue, can keep it simple or add class if needed
-        // mpBar.classList.add('bg-blue-500'); // Ensure it has its base color if not set in HTML
+        // MP bar styling is primarily via Tailwind in HTML (e.g., bg-blue-500)
     }
 
     if (locationDisplay) {
         locationDisplay.textContent = location;
     }
+    console.log("JS: update_player_stats finished.");
 }
 
 const itemDisplayDetails = {
